@@ -12,7 +12,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 authors = ["Faez Barghasa"]
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 # Internal crates
@@ -28,7 +28,7 @@ async-trait = "0.1.86"
 # Serialization & Config
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
-toml = "0.8.20"
+toml = "1.1.6+spec-1.1.0"
 
 # Error handling & Logging
 thiserror = "2.0.11"
@@ -39,25 +39,40 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 # CLI & File System
 clap = { version = "4.5.31", features = ["derive", "env"] }
 uuid = { version = "1.15", features = ["v7", "serde"] }
-sha2 = "0.10.8"
+sha2 = "0.11.0"
 chrono = { version = "0.4.39", features = ["serde"] }
 directories = "6.0.0"
 ignore = "0.4.23"
 walkdir = "2.5.0"
-zip = { version = "2.2.3", default-features = false, features = ["deflate"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
 # SurrealDB
-surrealdb = { version = "2.2.1", default-features = false, features = ["kv-surrealkv", "protocol-ws", "engine-local"] }
+surrealdb = { version = "3.2.4", default-features = false, features = [
+    "kv-surrealkv",
+    "protocol-ws",
+    "engine-local",
+] }
 
 # Tree-sitter
-tree-sitter = "0.24.7"
-tree-sitter-rust = "0.23.2"
-tree-sitter-python = "0.23.6"
-tree-sitter-javascript = "0.23.1"
+tree-sitter = "0.27.0"
+tree-sitter-rust = "0.24.2"
+tree-sitter-python = "0.25.0"
+tree-sitter-javascript = "0.25.0"
 tree-sitter-typescript = "0.23.2"
 
 # ML / Candle
-candle-core = "0.8.4"
-candle-nn = "0.8.4"
-candle-transformers = "0.8.4"
-tokenizers = { version = "0.21.0", default-features = false, features = ["onig"] }
+candle-core = "0.11.0"
+candle-nn = "0.11.0"
+candle-transformers = "0.11.0"
+tokenizers = { version = "0.23.2", default-features = false, features = [
+    "onig",
+] }
+
+
+[profile.release]
+opt-level = 3            # Enable maximum performance optimizations
+lto = "fat"              # Perform full Link-Time Optimization across all workspace crates
+codegen-units = 1        # Restrict compilation to a single unit for deeper global optimization
+panic = "abort"          # Strip stack-unwinding code, reducing binary size and call-site overhead
+strip = "symbols"        # Strip all debug symbols and tables from the target binary
+incremental = false      # Disable incremental compilation in release to allow broader optimizations

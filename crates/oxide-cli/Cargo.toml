@@ -1,0 +1,24 @@
+[package]
+name = "oxide-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "oxide-embed"
+path = "src/main.rs"
+
+[dependencies]
+oxide-core.workspace = true
+oxide-db.workspace = true
+oxide-parser.workspace = true
+oxide-ml.workspace = true
+tokio.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
