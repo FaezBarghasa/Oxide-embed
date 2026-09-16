@@ -37,8 +37,7 @@ impl ProjectWalker {
         builder.git_global(true);
         builder.git_exclude(true);
 
-        // Always ignore .oxide directory and custom ignores
-        let mut custom_ignore_path = self.project_root.join(".oxideignore");
+        let custom_ignore_path = self.project_root.join(".oxideignore");
         if custom_ignore_path.exists() {
             builder.add_custom_ignore_filename(".oxideignore");
         }
@@ -57,14 +56,12 @@ impl ProjectWalker {
                 continue;
             }
 
-            // Check if within .oxide
             if let Ok(rel) = path.strip_prefix(&self.project_root) {
                 let rel_str = normalize_relative_path(rel);
                 if rel_str.starts_with(".oxide") || rel_str.starts_with(".git") {
                     continue;
                 }
 
-                // Check custom ignore list strings
                 let should_ignore = self.custom_ignores.iter().any(|ign| {
                     rel_str.starts_with(ign.trim_end_matches('/'))
                 });
@@ -78,24 +75,35 @@ impl ProjectWalker {
                 };
 
                 let size_bytes = metadata.len();
-                if size_bytes > max_bytes {
+                if size_bytes > max_bytes && !rel_str.ends_with(".md") {
                     continue;
                 }
 
-                // Read file content
-                let content = match fs::read_to_string(path) {
-                    Ok(c) => c,
-                    Err(_) => continue, // Ignore binary or non-utf8 files
+                let language = Language::from_path(path);
+                let (content, content_hash) = if language.is_binary() {
+                    // Generate structured metadata outline for binary media
+                    let meta_desc = format!(
+                        "Asset Type: {}\nFile: {}\nSize: {} bytes\nExtension: {}",
+                        language.as_str(),
+                        rel_str,
+                        size_bytes,
+                        path.extension().and_then(|e| e.to_str()).unwrap_or("")
+                    );
+                    let mut hasher = Sha256::new();
+                    hasher.update(meta_desc.as_bytes());
+                    (meta_desc, format!("{:x}", hasher.finalize()))
+                } else {
+                    match fs::read_to_string(path) {
+                        Ok(c) => {
+                            let mut hasher = Sha256::new();
+                            hasher.update(c.as_bytes());
+                            (c, format!("{:x}", hasher.finalize()))
+                        }
+                        Err(_) => continue,
+                    }
                 };
 
-                // Compute hash
-                let mut hasher = Sha256::new();
-                hasher.update(content.as_bytes());
-                let content_hash = format!("{:x}", hasher.finalize());
-
-                let language = Language::from_path(path);
                 let file_id = FileId::from_relative_path(rel);
-
                 let record = FileRecord {
                     id: file_id,
                     project_id: self.project_id.clone(),
