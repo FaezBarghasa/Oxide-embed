@@ -14,7 +14,7 @@ pub struct SurrealProjectStore {
 }
 
 fn take_vec<T: for<'de> Deserialize<'de>>(
-    res: &mut surrealdb::method::query::IndexedResults,
+    res: &mut surrealdb::IndexedResults,
     idx: usize,
 ) -> Result<Vec<T>> {
     let rows: Vec<serde_json::Value> = res.take(idx).map_err(|e| OxideError::Database(e.to_string()))?;
