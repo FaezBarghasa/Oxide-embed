@@ -1,0 +1,26 @@
+{
+  "cachedAt": "2026-09-16T12:19:52.437Z",
+  "configSnapshots": {
+    "Cargo.toml": 1789560944602.2798
+  },
+  "context": {
+    "languages": [
+      {
+        "lang": "Rust",
+        "confidence": 0.95,
+        "evidence": [
+          "Cargo.toml"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "cargo",
+    "testPatterns": [
+      "cargo-test"
+    ],
+    "entryPoints": [
+      "src/main.rs"
+    ],
+    "ambiguity": "LOW"
+  }
+}
