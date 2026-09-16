@@ -1,6 +1,63 @@
-[package]
-name = "Oxide-embed"
+[workspace]
+resolver = "3"
+members = [
+    "crates/oxide-core",
+    "crates/oxide-db",
+    "crates/oxide-parser",
+    "crates/oxide-ml",
+    "crates/oxide-cli",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+authors = ["Faez Barghasa"]
+license = "MIT OR Apache-2.0"
 
-[dependencies]
+[workspace.dependencies]
+# Internal crates
+oxide-core = { path = "crates/oxide-core" }
+oxide-db = { path = "crates/oxide-db" }
+oxide-parser = { path = "crates/oxide-parser" }
+oxide-ml = { path = "crates/oxide-ml" }
+
+# Async & Runtime
+tokio = { version = "1.43", features = ["full"] }
+async-trait = "0.1.86"
+
+# Serialization & Config
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+toml = "0.8.20"
+
+# Error handling & Logging
+thiserror = "2.0.11"
+anyhow = "1.0.96"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
+
+# CLI & File System
+clap = { version = "4.5.31", features = ["derive", "env"] }
+uuid = { version = "1.15", features = ["v7", "serde"] }
+sha2 = "0.10.8"
+chrono = { version = "0.4.39", features = ["serde"] }
+directories = "6.0.0"
+ignore = "0.4.23"
+walkdir = "2.5.0"
+zip = { version = "2.2.3", default-features = false, features = ["deflate"] }
+
+# SurrealDB
+surrealdb = { version = "2.2.1", default-features = false, features = ["kv-surrealkv", "protocol-ws", "engine-local"] }
+
+# Tree-sitter
+tree-sitter = "0.24.7"
+tree-sitter-rust = "0.23.2"
+tree-sitter-python = "0.23.6"
+tree-sitter-javascript = "0.23.1"
+tree-sitter-typescript = "0.23.2"
+
+# ML / Candle
+candle-core = "0.8.4"
+candle-nn = "0.8.4"
+candle-transformers = "0.8.4"
+tokenizers = { version = "0.21.0", default-features = false, features = ["onig"] }
