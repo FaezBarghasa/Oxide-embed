@@ -22,7 +22,7 @@ impl CandleBertEmbedder {
         Self {
             model: None,
             tokenizer: None,
-            device: select_device(),
+            device: select_device("auto"),
             fallback: MockEmbedder::new(384),
             dimension: 384,
         }
@@ -33,7 +33,7 @@ impl CandleBertEmbedder {
         config_path: P,
         tokenizer_path: P,
     ) -> Result<Self> {
-        let device = select_device();
+        let device = select_device("auto");
         let config_str = std::fs::read_to_string(config_path.as_ref())
             .map_err(|e| OxideError::Ml(format!("Failed to read BERT config: {e}")))?;
         let config: Config = serde_json::from_str(&config_str)
