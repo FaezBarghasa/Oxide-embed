@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use surrealdb::engine::local::{Db, SurrealKv};
 use surrealdb::Surreal;
+use surrealdb::opt::SurrealValue;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{ChunkRecord, FileRecord, SymbolRecord};
 use crate::schema::INITIAL_SCHEMA_SURQL;
@@ -13,17 +14,17 @@ pub struct SurrealProjectStore {
     db: Surreal<Db>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, SurrealValue)]
 struct CountResult {
     count: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, SurrealValue)]
 struct OutlineResult {
     outline: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, SurrealValue)]
 struct RawChunkResult {
     file_path: Option<String>,
     symbol_name: Option<String>,
@@ -32,6 +33,11 @@ struct RawChunkResult {
     outline: Option<String>,
     text: String,
     embedding: Option<Vec<f32>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, SurrealValue)]
+struct IdOnly {
+    id: surrealdb::sql::Thing,
 }
 
 #[async_trait]
@@ -47,7 +53,6 @@ impl ProjectStore for SurrealProjectStore {
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
-        // Initialize schema
         db.query(INITIAL_SCHEMA_SURQL)
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
@@ -155,41 +160,58 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn get_file_symbols(&self, file_path: &str) -> Result<Vec<SymbolRecord>> {
-        let sql = r#"
-            LET $f = (SELECT id FROM file WHERE relative_path = $path LIMIT 1);
-            SELECT * FROM symbol WHERE file_id = $f[0].id.id ORDER BY start_line ASC;
-        "#;
-
-        let mut res = self
+        let file_query = "SELECT id FROM file WHERE relative_path = $path LIMIT 1;";
+        let mut file_res = self
             .db
-            .query(sql)
+            .query(file_query)
             .bind(("path", file_path.to_string()))
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
-        let symbols: Vec<SymbolRecord> = res.take(1).map_err(|e| OxideError::Database(e.to_string()))?;
-        Ok(symbols)
+        let files: Vec<IdOnly> = file_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+        if let Some(f) = files.first() {
+            let sql = "SELECT * FROM symbol WHERE file_id = $fid ORDER BY start_line ASC;";
+            let mut sym_res = self
+                .db
+                .query(sql)
+                .bind(("fid", f.id.id.to_raw()))
+                .await
+                .map_err(|e| OxideError::Database(e.to_string()))?;
+
+            let symbols: Vec<SymbolRecord> = sym_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+            Ok(symbols)
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     async fn get_file_outline(&self, file_path: &str) -> Result<Option<String>> {
-        let sql = r#"
-            LET $f = (SELECT id FROM file WHERE relative_path = $path LIMIT 1);
-            SELECT outline FROM chunk WHERE file_id = $f[0].id.id AND kind = 'file_outline' LIMIT 1;
-        "#;
-
-        let mut res = self
+        let file_query = "SELECT id FROM file WHERE relative_path = $path LIMIT 1;";
+        let mut file_res = self
             .db
-            .query(sql)
+            .query(file_query)
             .bind(("path", file_path.to_string()))
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
-        let rows: Vec<OutlineResult> = res.take(1).map_err(|e| OxideError::Database(e.to_string()))?;
-        Ok(rows.into_iter().next().and_then(|r| r.outline))
+        let files: Vec<IdOnly> = file_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+        if let Some(f) = files.first() {
+            let sql = "SELECT outline FROM chunk WHERE file_id = $fid AND kind = 'file_outline' LIMIT 1;";
+            let mut out_res = self
+                .db
+                .query(sql)
+                .bind(("fid", f.id.id.to_raw()))
+                .await
+                .map_err(|e| OxideError::Database(e.to_string()))?;
+
+            let rows: Vec<OutlineResult> = out_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+            Ok(rows.into_iter().next().and_then(|r| r.outline))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>> {
-        // Hybrid / Lexical + Vector scoring in memory or SurrealQL
         let sql = r#"
             SELECT 
                 (SELECT VALUE relative_path FROM file WHERE id = type::thing('file', chunk.file_id))[0] AS file_path,
@@ -222,7 +244,6 @@ impl ProjectStore for SurrealProjectStore {
 
                 let mut score = 0.0f32;
 
-                // Lexical scoring
                 if sym_lower.contains(&query_lower) && !query_lower.is_empty() {
                     score += 0.5;
                 }
@@ -233,7 +254,6 @@ impl ProjectStore for SurrealProjectStore {
                     score += 0.2;
                 }
 
-                // Vector cosine similarity
                 if let (Some(q_emb), Some(c_emb)) = (&query.embedding, &c.embedding) {
                     let sim = cosine_similarity(q_emb, c_emb);
                     score += sim * 0.7;
@@ -291,16 +311,14 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn export_surql(&self) -> Result<String> {
-        // Simple export of all records
-        let mut res = self
-            .db
-            .query("SELECT * FROM file; SELECT * FROM symbol; SELECT * FROM chunk;")
-            .await
-            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let mut f_res = self.db.query("SELECT * FROM file;").await.map_err(|e| OxideError::Database(e.to_string()))?;
+        let files: Vec<serde_json::Value> = f_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
 
-        let files: Vec<serde_json::Value> = res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
-        let symbols: Vec<serde_json::Value> = res.take(1).map_err(|e| OxideError::Database(e.to_string()))?;
-        let chunks: Vec<serde_json::Value> = res.take(2).map_err(|e| OxideError::Database(e.to_string()))?;
+        let mut s_res = self.db.query("SELECT * FROM symbol;").await.map_err(|e| OxideError::Database(e.to_string()))?;
+        let symbols: Vec<serde_json::Value> = s_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+
+        let mut c_res = self.db.query("SELECT * FROM chunk;").await.map_err(|e| OxideError::Database(e.to_string()))?;
+        let chunks: Vec<serde_json::Value> = c_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
 
         let dump = serde_json::json!({
             "files": files,

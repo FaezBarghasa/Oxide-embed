@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use crate::id::bytes_to_hex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PoolingMethod {
@@ -59,7 +60,11 @@ impl EmbeddingMetadata {
         hasher.update(quantization.as_bytes());
         hasher.update(dimension.to_string().as_bytes());
         hasher.update(format!("{:?}", pooling).as_bytes());
-        hasher.update(if normalized { b"norm:true" } else { b"norm:false" });
-        format!("{:x}", hasher.finalize())
+        if normalized {
+            hasher.update(b"norm:true");
+        } else {
+            hasher.update(b"norm:false");
+        }
+        bytes_to_hex(&hasher.finalize())
     }
 }

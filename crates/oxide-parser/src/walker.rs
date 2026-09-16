@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use ignore::WalkBuilder;
 use sha2::{Digest, Sha256};
 use oxide_core::error::Result;
-use oxide_core::id::{normalize_relative_path, FileId, ProjectId};
+use oxide_core::id::{bytes_to_hex, normalize_relative_path, FileId, ProjectId};
 use oxide_core::FileRecord;
 use crate::language::Language;
 
@@ -81,7 +81,6 @@ impl ProjectWalker {
 
                 let language = Language::from_path(path);
                 let (content, content_hash) = if language.is_binary() {
-                    // Generate structured metadata outline for binary media
                     let meta_desc = format!(
                         "Asset Type: {}\nFile: {}\nSize: {} bytes\nExtension: {}",
                         language.as_str(),
@@ -91,13 +90,13 @@ impl ProjectWalker {
                     );
                     let mut hasher = Sha256::new();
                     hasher.update(meta_desc.as_bytes());
-                    (meta_desc, format!("{:x}", hasher.finalize()))
+                    (meta_desc, bytes_to_hex(&hasher.finalize()))
                 } else {
                     match fs::read_to_string(path) {
                         Ok(c) => {
                             let mut hasher = Sha256::new();
                             hasher.update(c.as_bytes());
-                            (c, format!("{:x}", hasher.finalize()))
+                            (c, bytes_to_hex(&hasher.finalize()))
                         }
                         Err(_) => continue,
                     }

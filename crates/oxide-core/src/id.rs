@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Write};
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -42,7 +42,7 @@ impl FileId {
         let normalized = normalize_relative_path(path.as_ref());
         let mut hasher = Sha256::new();
         hasher.update(normalized.as_bytes());
-        let hash = format!("{:x}", hasher.finalize());
+        let hash = bytes_to_hex(&hasher.finalize());
         Self(hash)
     }
 }
@@ -62,7 +62,7 @@ impl SymbolId {
         hasher.update(file_id.0.as_bytes());
         hasher.update(b"::");
         hasher.update(qualified_name.as_bytes());
-        Self(format!("{:x}", hasher.finalize()))
+        Self(bytes_to_hex(&hasher.finalize()))
     }
 }
 
@@ -89,7 +89,7 @@ impl ChunkId {
         }
         hasher.update(chunk_kind.as_bytes());
         hasher.update(content_hash.as_bytes());
-        Self(format!("{:x}", hasher.finalize()))
+        Self(bytes_to_hex(&hasher.finalize()))
     }
 }
 
@@ -104,4 +104,12 @@ pub fn normalize_relative_path(path: &Path) -> String {
         .map(|c| c.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
+}
+
+pub fn bytes_to_hex(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        let _ = write!(s, "{:02x}", b);
+    }
+    s
 }

@@ -1,6 +1,6 @@
 use chrono::Utc;
 use sha2::{Digest, Sha256};
-use oxide_core::id::{ChunkId, FileId};
+use oxide_core::id::{bytes_to_hex, ChunkId, FileId};
 use oxide_core::{ChunkKind, ChunkRecord, SymbolRecord};
 use crate::outline::OutlineGenerator;
 
@@ -28,7 +28,7 @@ impl Chunker {
             let outline = OutlineGenerator::generate_outline(symbols);
             let mut hasher = Sha256::new();
             hasher.update(outline.as_bytes());
-            let hash = format!("{:x}", hasher.finalize());
+            let hash = bytes_to_hex(&hasher.finalize());
 
             let chunk_id = ChunkId::new(file_id, None, ChunkKind::FileOutline.as_str(), &hash);
             chunks.push(ChunkRecord {
@@ -58,7 +58,7 @@ impl Chunker {
 
                 let mut hasher = Sha256::new();
                 hasher.update(symbol_text.as_bytes());
-                let hash = format!("{:x}", hasher.finalize());
+                let hash = bytes_to_hex(&hasher.finalize());
 
                 let chunk_id = ChunkId::new(
                     file_id,
@@ -86,11 +86,11 @@ impl Chunker {
             }
         }
 
-        // 3. Fallback file summary if no symbols extracted (plain text, markdown, config, etc)
+        // 3. Fallback file summary if no symbols extracted
         if chunks.is_empty() && !content.trim().is_empty() {
             let mut hasher = Sha256::new();
             hasher.update(content.as_bytes());
-            let hash = format!("{:x}", hasher.finalize());
+            let hash = bytes_to_hex(&hasher.finalize());
 
             let chunk_id = ChunkId::new(file_id, None, ChunkKind::FileSummary.as_str(), &hash);
             chunks.push(ChunkRecord {

@@ -49,8 +49,8 @@ zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 # SurrealDB
 surrealdb = { version = "3.2.4", default-features = false, features = [
     "kv-surrealkv",
+    "kv-mem",
     "protocol-ws",
-    "engine-local",
 ] }
 
 # Tree-sitter
