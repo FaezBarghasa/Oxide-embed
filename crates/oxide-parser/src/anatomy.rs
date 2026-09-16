@@ -179,7 +179,11 @@ impl AnatomyScanner {
             use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
             hasher.update(content.as_bytes());
-            let hash = format!("{:x}", hasher.finalize());
+            let hash_bytes = hasher.finalize();
+            let mut hash = String::with_capacity(64);
+            for b in hash_bytes {
+                let _ = write!(hash, "{:02x}", b);
+            }
 
             // Check if unchanged in existing index
             if let Some(existing) = index.files.get(&rel_path) {
