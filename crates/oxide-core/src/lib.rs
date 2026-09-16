@@ -14,4 +14,4 @@ pub use error::{OxideError, Result};
 pub use file::FileRecord;
 pub use id::{ChunkId, FileId, ProjectId, SymbolId, WorkspaceId};
 pub use manifest::OxideManifest;
-pub use symbol::{SymbolKind, SymbolRecord};
+pub use symbol::{CallEdge, ImportEdge, SymbolKind, SymbolRecord};

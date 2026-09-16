@@ -53,3 +53,17 @@ pub struct SymbolRecord {
     pub doc: Option<String>,
     pub fingerprint: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CallEdge {
+    pub caller_symbol_id: SymbolId,
+    pub callee_name: String,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportEdge {
+    pub file_id: FileId,
+    pub imported_path: String,
+    pub imported_symbols: Vec<String>,
+}

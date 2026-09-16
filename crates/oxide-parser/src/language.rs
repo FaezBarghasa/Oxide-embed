@@ -19,20 +19,14 @@ pub enum Language {
     Html,
     Json,
     Yaml,
-    Xml,
+    Toml,
     Gradle,
     Docker,
     Qemu,
     Cfg,
-    
-    // Data & Config
-    Json,
-    Yaml,
-    Toml,
-    Cfg,
     Csv,
-    Markdown,
-    
+    Svg,
+
     // Media & Assets (Metadata indexing)
     Image(ImageFormat),
     Audio(AudioFormat),
@@ -132,7 +126,7 @@ impl Language {
             // Images
             "png" => Self::Image(ImageFormat::Png),
             "jpg" | "jpeg" => Self::Image(ImageFormat::Jpeg),
-            "svg" => Self::Image(ImageFormat::Svg),
+            "svg" => Self::Svg,
             "webp" => Self::Image(ImageFormat::Webp),
             "gif" => Self::Image(ImageFormat::Gif),
             "ico" => Self::Image(ImageFormat::Ico),
@@ -187,7 +181,7 @@ impl Language {
             Self::Cfg => "cfg",
             Self::Csv => "csv",
             Self::Markdown => "markdown",
-            Self::Image(ImageFormat::Svg) => "svg",
+            Self::Svg => "svg",
             Self::Image(_) => "image",
             Self::Audio(_) => "audio",
             Self::Video(_) => "video",
@@ -198,7 +192,7 @@ impl Language {
 
     pub fn is_binary(&self) -> bool {
         match self {
-            Self::Image(ImageFormat::Svg) => false,
+            Self::Svg => false,
             Self::Image(_) | Self::Audio(_) | Self::Video(_) | Self::Document(_) => true,
             _ => false,
         }

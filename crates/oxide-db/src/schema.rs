@@ -48,4 +48,95 @@ DEFINE FIELD started_at ON oxide_migration TYPE datetime;
 DEFINE FIELD finished_at ON oxide_migration TYPE option<datetime>;
 DEFINE FIELD status ON oxide_migration TYPE string;
 DEFINE FIELD backup_path ON oxide_migration TYPE option<string>;
+
+-- Cognee Cognitive Graph Tables
+DEFINE TABLE calls SCHEMAFULL TYPE RELATION;
+DEFINE FIELD in ON calls TYPE record<symbol>;
+DEFINE FIELD out ON calls TYPE record<symbol>;
+DEFINE FIELD weight ON calls TYPE float DEFAULT 1.0;
+DEFINE FIELD traversal_count ON calls TYPE int DEFAULT 0;
+DEFINE FIELD last_traversed_at ON calls TYPE option<datetime>;
+DEFINE FIELD valid_from ON calls TYPE datetime DEFAULT time::now();
+DEFINE FIELD valid_to ON calls TYPE option<datetime>;
+DEFINE INDEX idx_calls_active ON calls FIELDS valid_to WHERE valid_to IS NONE;
+
+DEFINE TABLE contains SCHEMAFULL TYPE RELATION;
+DEFINE FIELD in ON contains TYPE record<file>;
+DEFINE FIELD out ON contains TYPE record<symbol>;
+DEFINE FIELD valid_from ON contains TYPE datetime DEFAULT time::now();
+DEFINE FIELD valid_to ON contains TYPE option<datetime>;
+
+DEFINE TABLE imports SCHEMAFULL TYPE RELATION;
+DEFINE FIELD in ON imports TYPE record<file>;
+DEFINE FIELD out ON imports TYPE record<file>;
+DEFINE FIELD imported_symbols ON imports TYPE array<string>;
+DEFINE FIELD weight ON imports TYPE float DEFAULT 1.0;
+
+DEFINE TABLE doc_section SCHEMAFULL;
+DEFINE FIELD file_path ON doc_section TYPE string;
+DEFINE FIELD heading ON doc_section TYPE string;
+DEFINE FIELD content ON doc_section TYPE string;
+DEFINE FIELD embedding ON doc_section TYPE option<array<float>>;
+
+DEFINE TABLE doc_reference SCHEMAFULL TYPE RELATION;
+DEFINE FIELD in ON doc_reference TYPE record<doc_section>;
+DEFINE FIELD out ON doc_reference TYPE record<symbol>;
+DEFINE FIELD context ON doc_reference TYPE string;
+DEFINE FIELD created_at ON doc_reference TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE cerebrum_rule SCHEMAFULL;
+DEFINE FIELD rule ON cerebrum_rule TYPE string;
+DEFINE FIELD source_cluster ON cerebrum_rule TYPE option<string>;
+DEFINE FIELD created_at ON cerebrum_rule TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE buglog SCHEMAFULL;
+DEFINE FIELD description ON buglog TYPE string;
+DEFINE FIELD resolution ON buglog TYPE option<string>;
+DEFINE FIELD embedding ON buglog TYPE option<array<float>>;
+DEFINE FIELD status ON buglog TYPE string DEFAULT "active";
+DEFINE FIELD cluster_id ON buglog TYPE option<string>;
+DEFINE FIELD consolidated_into ON buglog TYPE option<record<cerebrum_rule>>;
+DEFINE FIELD created_at ON buglog TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_buglog_active ON buglog FIELDS status WHERE status = "active";
+
+DEFINE TABLE memory_evolution_log SCHEMAFULL;
+DEFINE FIELD action ON memory_evolution_log TYPE string;
+DEFINE FIELD target_table ON memory_evolution_log TYPE string;
+DEFINE FIELD records_affected ON memory_evolution_log TYPE int;
+DEFINE FIELD executed_at ON memory_evolution_log TYPE datetime DEFAULT time::now();
+
+-- OpenWolf Execution Context Hygiene Tables
+DEFINE TABLE bash_cache SCHEMAFULL;
+DEFINE FIELD command ON bash_cache TYPE string;
+DEFINE FIELD exit_code ON bash_cache TYPE int;
+DEFINE FIELD log_path ON bash_cache TYPE string;
+DEFINE FIELD original_bytes ON bash_cache TYPE int;
+DEFINE FIELD condensed_bytes ON bash_cache TYPE int;
+DEFINE FIELD created_at ON bash_cache TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE session_read SCHEMAFULL;
+DEFINE FIELD session_id ON session_read TYPE string;
+DEFINE FIELD file_id ON session_read TYPE string;
+DEFINE FIELD content_hash ON session_read TYPE string;
+DEFINE FIELD read_count ON session_read TYPE int DEFAULT 1;
+DEFINE FIELD last_read_at ON session_read TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_session_file ON session_read FIELDS session_id, file_id UNIQUE;
+
+DEFINE TABLE handoff_checkpoint SCHEMAFULL;
+DEFINE FIELD objective ON handoff_checkpoint TYPE string;
+DEFINE FIELD active_branch ON handoff_checkpoint TYPE string;
+DEFINE FIELD files_modified ON handoff_checkpoint TYPE array<string>;
+DEFINE FIELD pending_errors ON handoff_checkpoint TYPE array<string>;
+DEFINE FIELD next_step ON handoff_checkpoint TYPE string;
+DEFINE FIELD created_at ON handoff_checkpoint TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE token_ledger SCHEMAFULL;
+DEFINE FIELD agent_harness ON token_ledger TYPE string;
+DEFINE FIELD model_id ON token_ledger TYPE string;
+DEFINE FIELD input_tokens ON token_ledger TYPE int;
+DEFINE FIELD cached_tokens ON token_ledger TYPE int;
+DEFINE FIELD output_tokens ON token_ledger TYPE int;
+DEFINE FIELD reasoning_tokens ON token_ledger TYPE int;
+DEFINE FIELD estimated_cost_usd ON token_ledger TYPE float;
+DEFINE FIELD recorded_at ON token_ledger TYPE datetime DEFAULT time::now();
 "#;

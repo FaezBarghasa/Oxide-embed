@@ -1,7 +1,7 @@
 use std::path::Path;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::OxideManifest;
-use oxide_db::{OxemBundle, SurrealProjectStore};
+use oxide_db::{OxemBundle, ProjectStore, SurrealProjectStore};
 
 pub async fn handle_export(project_root: &Path, output_path: &Path) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
