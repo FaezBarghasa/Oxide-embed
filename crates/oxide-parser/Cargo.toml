@@ -24,5 +24,6 @@ ignore.workspace = true
 walkdir.workspace = true
 sha2.workspace = true
 tracing.workspace = true
+chrono.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true

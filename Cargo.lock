@@ -3008,6 +3008,7 @@ name = "oxide-ml"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "candle-core",
  "candle-nn",
  "candle-transformers",
@@ -3025,6 +3026,7 @@ name = "oxide-parser"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "ignore",
  "oxide-core",
  "sha2 0.11.0",
