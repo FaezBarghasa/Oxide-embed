@@ -8,7 +8,6 @@ authors.workspace = true
 [dependencies]
 oxide-core.workspace = true
 surrealdb.workspace = true
-surrealdb-types.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 serde.workspace = true
