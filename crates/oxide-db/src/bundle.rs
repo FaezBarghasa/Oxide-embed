@@ -44,20 +44,26 @@ impl OxemBundle {
         let mut zip = ZipArchive::new(file).map_err(|e| OxideError::Other(e.to_string()))?;
 
         // 1. Read manifest.json
-        let mut manifest_file = zip
-            .by_name("manifest.json")
-            .map_err(|e| OxideError::Other(e.to_string()))?;
-        let mut manifest_str = String::new();
-        manifest_file.read_to_string(&mut manifest_str)?;
-        let manifest: OxideManifest = serde_json::from_str(&manifest_str)?;
-        manifest.validate()?;
+        let manifest: OxideManifest = {
+            let mut manifest_file = zip
+                .by_name("manifest.json")
+                .map_err(|e| OxideError::Other(e.to_string()))?;
+            let mut manifest_str = String::new();
+            manifest_file.read_to_string(&mut manifest_str)?;
+            let manifest: OxideManifest = serde_json::from_str(&manifest_str)?;
+            manifest.validate()?;
+            manifest
+        };
 
         // 2. Read export.json
-        let mut export_file = zip
-            .by_name("export.json")
-            .map_err(|e| OxideError::Other(e.to_string()))?;
-        let mut export_str = String::new();
-        export_file.read_to_string(&mut export_str)?;
+        let export_str = {
+            let mut export_file = zip
+                .by_name("export.json")
+                .map_err(|e| OxideError::Other(e.to_string()))?;
+            let mut export_str = String::new();
+            export_file.read_to_string(&mut export_str)?;
+            export_str
+        };
 
         store.import_surql(&export_str).await?;
         Ok(manifest)
