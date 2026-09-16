@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use serde::{Deserialize, Serialize};
-use oxide_core::error::{OxideError, Result};
+use oxide_core::error::Result;
 use oxide_core::id::FileId;
 use crate::language::Language;
 use crate::languages::get_extractor;
