@@ -59,6 +59,14 @@ tree-sitter-rust = "0.24.2"
 tree-sitter-python = "0.25.0"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-typescript = "0.23.2"
+tree-sitter-go = "0.25.0"
+tree-sitter-java = "0.23.5"
+tree-sitter-bash = "0.25.1"
+tree-sitter-html = "0.23.2"
+tree-sitter-css = "0.25.0"
+tree-sitter-json = "0.24.8"
+tree-sitter-yaml = "0.7.0"
+tree-sitter-md = "0.5.3"
 
 # ML / Candle
 candle-core = "0.11.0"
@@ -70,9 +78,9 @@ tokenizers = { version = "0.23.2", default-features = false, features = [
 
 
 [profile.release]
-opt-level = 3            # Enable maximum performance optimizations
-lto = "fat"              # Perform full Link-Time Optimization across all workspace crates
-codegen-units = 1        # Restrict compilation to a single unit for deeper global optimization
-panic = "abort"          # Strip stack-unwinding code, reducing binary size and call-site overhead
-strip = "symbols"        # Strip all debug symbols and tables from the target binary
-incremental = false      # Disable incremental compilation in release to allow broader optimizations
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+incremental = false
