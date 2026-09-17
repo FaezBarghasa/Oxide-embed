@@ -93,7 +93,8 @@ impl Embedder for CandleBertEmbedder {
             let tokens = tokenizer
                 .encode(text, true)
                 .map_err(|e| OxideError::Ml(format!("Tokenizer error: {e}")))?;
-            let token_ids = tokens.get_ids();
+            let raw_token_ids = tokens.get_ids();
+            let token_ids = &raw_token_ids[..raw_token_ids.len().min(512)];
             let input_ids = Tensor::new(token_ids, &self.device)
                 .map_err(|e| OxideError::Ml(e.to_string()))?
                 .unsqueeze(0)

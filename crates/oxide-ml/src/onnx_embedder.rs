@@ -55,9 +55,11 @@ impl Embedder for OnnxGemmaEmbedder {
             .encode(text, true)
             .map_err(|e| OxideError::Ml(format!("Tokenizer error: {e}")))?;
 
-        let token_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
+        let raw_ids = encoding.get_ids();
+        let max_len = raw_ids.len().min(2048);
+        let token_ids: Vec<i64> = raw_ids[..max_len].iter().map(|&id| id as i64).collect();
         let attention_mask: Vec<i64> = encoding
-            .get_attention_mask()
+            .get_attention_mask()[..max_len]
             .iter()
             .map(|&m| m as i64)
             .collect();
