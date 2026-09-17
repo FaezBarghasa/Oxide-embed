@@ -30,7 +30,7 @@ pub async fn handle_context(
         None
     };
 
-    // 2. Read Cerebrum Rules
+    // 2. Read Cerebrum Rules & Active Typed Semantic Memories
     let mut rules = Vec::new();
     let cerebrum_path = oxide_dir.join("docs").join("CEREBRUM.md");
     if cerebrum_path.exists() {
@@ -52,6 +52,24 @@ pub async fn handle_context(
                     created_at: chrono::Utc::now().timestamp(),
                 });
             }
+        }
+    }
+
+    // Read active typed semantic rules from database
+    if let Ok(db_path) = oxide_core::resolve_db_path(project_root)
+        && let Ok(store) = SurrealProjectStore::open(&db_path).await
+        && let Ok(db_memories) = store.list_active_rules().await
+    {
+        for (idx, mem) in db_memories.into_iter().enumerate() {
+            rules.push(CerebrumRule {
+                id: format!("mem_{}", idx),
+                title: format!("[{}] {}", mem.kind.as_str().to_uppercase(), mem.title),
+                condition_pattern: mem.kind.as_str().to_string(),
+                prescribed_solution: mem.content,
+                confidence: 0.95,
+                source_incidents: vec![],
+                created_at: mem.created_at.timestamp(),
+            });
         }
     }
 
