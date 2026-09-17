@@ -36,6 +36,9 @@ pub enum OxideError {
     #[error("Incompatible vector set: stored {stored}, current {current}")]
     IncompatibleVectorSet { stored: String, current: String },
 
+    #[error("Not found: {0}")]
+    NotFound(String),
+
     #[error("Other error: {0}")]
     Other(String),
 }

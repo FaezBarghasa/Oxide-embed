@@ -1,7 +1,7 @@
 use oxide_core::error::{OxideError, Result};
 use oxide_core::resolve_db_path;
 use oxide_db::traversal::GraphTraversalService;
-use oxide_db::SurrealProjectStore;
+use oxide_db::{ProjectStore, SurrealProjectStore};
 use std::path::Path;
 
 pub async fn handle_callers(project_root: &Path, symbol: &str, budget: Option<usize>) -> Result<()> {
