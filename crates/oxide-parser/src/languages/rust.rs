@@ -214,24 +214,23 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
                 });
             }
         }
-    } else if kind == "field_expression" || kind == "method_call_expression" {
-        if let Some(method_node) = node.child_by_field_name("name")
-            && let Ok(callee_text) = method_node.utf8_text(content.as_bytes())
-        {
-            let line = node.start_position().row + 1;
-            let callee_name = callee_text.trim().to_string();
+    } else if (kind == "field_expression" || kind == "method_call_expression")
+        && let Some(method_node) = node.child_by_field_name("name")
+        && let Ok(callee_text) = method_node.utf8_text(content.as_bytes())
+    {
+        let line = node.start_position().row + 1;
+        let callee_name = callee_text.trim().to_string();
 
-            if let Some(caller) = symbols.iter().find(|s| {
-                s.start_line <= line
-                    && line <= s.end_line
-                    && matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
-            }) {
-                calls.push(CallEdge {
-                    caller_symbol_id: caller.id.clone(),
-                    callee_name,
-                    line,
-                });
-            }
+        if let Some(caller) = symbols.iter().find(|s| {
+            s.start_line <= line
+                && line <= s.end_line
+                && matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
+        }) {
+            calls.push(CallEdge {
+                caller_symbol_id: caller.id.clone(),
+                callee_name,
+                line,
+            });
         }
     }
 
@@ -242,12 +241,13 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
 }
 
 fn traverse_imports(node: Node, content: &str, file_id: &FileId, imports: &mut Vec<ImportEdge>) {
-    if node.kind() == "use_declaration" {
-        if let Ok(use_text) = node.utf8_text(content.as_bytes()) {
-            let cleaned = use_text
-                .trim_start_matches("use ")
-                .trim_end_matches(';')
-                .trim();
+    if node.kind() == "use_declaration"
+        && let Ok(use_text) = node.utf8_text(content.as_bytes())
+    {
+        let cleaned = use_text
+            .trim_start_matches("use ")
+            .trim_end_matches(';')
+            .trim();
 
             let mut imported_symbols = Vec::new();
             if let Some(last_part) = cleaned.split("::").last() {

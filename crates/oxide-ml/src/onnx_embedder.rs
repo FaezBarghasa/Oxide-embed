@@ -112,15 +112,15 @@ impl Embedder for OnnxGemmaEmbedder {
         let num_tokens = seq_len.max(1);
 
         for t in 0..seq_len {
-            for h in 0..hidden_dim {
+            for (h, slot) in pooled.iter_mut().enumerate().take(hidden_dim) {
                 let idx = t * hidden_dim + h;
                 if idx < data.len() {
-                    pooled[h] += data[idx];
+                    *slot += data[idx];
                 }
             }
         }
-        for h in 0..hidden_dim {
-            pooled[h] /= num_tokens as f32;
+        for slot in &mut pooled {
+            *slot /= num_tokens as f32;
         }
 
         // L2 Normalization

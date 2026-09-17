@@ -145,29 +145,28 @@ fn traverse_node(
 }
 
 fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &mut Vec<CallEdge>) {
-    if node.kind() == "call_expression" {
-        if let Some(func_node) = node.child_by_field_name("function")
-            && let Ok(callee_text) = func_node.utf8_text(content.as_bytes())
-        {
-            let line = node.start_position().row + 1;
-            let callee_name = callee_text
-                .split('.')
-                .last()
-                .unwrap_or(callee_text)
-                .trim()
-                .to_string();
+    if node.kind() == "call_expression"
+        && let Some(func_node) = node.child_by_field_name("function")
+        && let Ok(callee_text) = func_node.utf8_text(content.as_bytes())
+    {
+        let line = node.start_position().row + 1;
+        let callee_name = callee_text
+            .split('.')
+            .next_back()
+            .unwrap_or(callee_text)
+            .trim()
+            .to_string();
 
-            if let Some(caller) = symbols.iter().find(|s| {
-                s.start_line <= line
-                    && line <= s.end_line
-                    && matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
-            }) {
-                calls.push(CallEdge {
-                    caller_symbol_id: caller.id.clone(),
-                    callee_name,
-                    line,
-                });
-            }
+        if let Some(caller) = symbols.iter().find(|s| {
+            s.start_line <= line
+                && line <= s.end_line
+                && matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
+        }) {
+            calls.push(CallEdge {
+                caller_symbol_id: caller.id.clone(),
+                callee_name,
+                line,
+            });
         }
     }
 
@@ -178,25 +177,25 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
 }
 
 fn traverse_imports(node: Node, content: &str, file_id: &FileId, imports: &mut Vec<ImportEdge>) {
-    if node.kind() == "import_statement" {
-        if let Ok(import_text) = node.utf8_text(content.as_bytes()) {
-            let path = if let Some(source_node) = node.child_by_field_name("source") {
-                source_node
-                    .utf8_text(content.as_bytes())
-                    .unwrap_or("")
-                    .trim_matches('\'')
-                    .trim_matches('"')
-                    .to_string()
-            } else {
-                import_text.to_string()
-            };
+    if node.kind() == "import_statement"
+        && let Ok(import_text) = node.utf8_text(content.as_bytes())
+    {
+        let path = if let Some(source_node) = node.child_by_field_name("source") {
+            source_node
+                .utf8_text(content.as_bytes())
+                .unwrap_or("")
+                .trim_matches('\'')
+                .trim_matches('"')
+                .to_string()
+        } else {
+            import_text.to_string()
+        };
 
-            imports.push(ImportEdge {
-                file_id: file_id.clone(),
-                imported_path: path,
-                imported_symbols: Vec::new(),
-            });
-        }
+        imports.push(ImportEdge {
+            file_id: file_id.clone(),
+            imported_path: path,
+            imported_symbols: Vec::new(),
+        });
     }
 
     let mut cursor = node.walk();
