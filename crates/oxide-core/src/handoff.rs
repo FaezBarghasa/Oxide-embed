@@ -112,9 +112,15 @@ impl HandoffCheckpoint {
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("- **Session ID**:") {
-                session_id = trimmed.trim_start_matches("- **Session ID**:").trim().to_string();
+                session_id = trimmed
+                    .trim_start_matches("- **Session ID**:")
+                    .trim()
+                    .to_string();
             } else if trimmed.starts_with("- **Active Goal**:") {
-                active_goal = trimmed.trim_start_matches("- **Active Goal**:").trim().to_string();
+                active_goal = trimmed
+                    .trim_start_matches("- **Active Goal**:")
+                    .trim()
+                    .to_string();
             } else if trimmed.starts_with("> ") {
                 next_action = trimmed.trim_start_matches("> ").trim().to_string();
             } else if trimmed.starts_with("- [x] ") {
@@ -122,7 +128,11 @@ impl HandoffCheckpoint {
             } else if trimmed.starts_with("- [ ] ") {
                 pending_tasks.push(trimmed.trim_start_matches("- [ ] ").trim().to_string());
             } else if trimmed.starts_with("- `") && trimmed.ends_with('`') {
-                modified_files.push(trimmed.trim_matches(|c| c == '-' || c == '`' || c == ' ').to_string());
+                modified_files.push(
+                    trimmed
+                        .trim_matches(|c| c == '-' || c == '`' || c == ' ')
+                        .to_string(),
+                );
             } else if trimmed.starts_with("- ") && !trimmed.contains("**") {
                 key_decisions.push(trimmed.trim_start_matches("- ").trim().to_string());
             }

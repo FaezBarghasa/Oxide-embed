@@ -115,14 +115,16 @@ pub enum Commands {
         command: Vec<String>,
     },
 
-    #[command(
-        about = "Read a file through SessionReadGuard or surgically slice an AST symbol"
-    )]
+    #[command(about = "Read a file through SessionReadGuard or surgically slice an AST symbol")]
     Read {
         #[arg(help = "Relative path to target file")]
         path: PathBuf,
 
-        #[arg(short, long, help = "Surgically extract and slice only a specific symbol")]
+        #[arg(
+            short,
+            long,
+            help = "Surgically extract and slice only a specific symbol"
+        )]
         symbol: Option<String>,
 
         #[arg(long, help = "Force full file content read even if unchanged")]
@@ -157,10 +159,14 @@ pub enum Commands {
     )]
     Consolidate,
 
-    #[command(about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration")]
+    #[command(
+        about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration"
+    )]
     Mcp,
 
-    #[command(about = "Start real-time debounced file watcher for incremental sub-millisecond AST re-indexing")]
+    #[command(
+        about = "Start real-time debounced file watcher for incremental sub-millisecond AST re-indexing"
+    )]
     Watch,
 
     #[command(about = "Export memory to portable .oxem bundle")]

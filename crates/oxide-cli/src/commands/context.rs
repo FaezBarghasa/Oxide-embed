@@ -5,8 +5,8 @@ use oxide_core::handoff::HandoffCheckpoint;
 use oxide_core::memify::CerebrumRule;
 use oxide_db::traversal::GraphTraversalService;
 use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
-use oxide_ml::candle_embedder::CandleBertEmbedder;
 use oxide_ml::Embedder;
+use oxide_ml::candle_embedder::CandleBertEmbedder;
 use std::path::Path;
 
 pub async fn handle_context(
@@ -60,7 +60,7 @@ pub async fn handle_context(
     let db_path = oxide_dir.join("db");
     if db_path.exists() {
         let store = SurrealProjectStore::open(&db_path).await?;
-        let embedder = CandleBertEmbedder::new();
+        let embedder = CandleBertEmbedder::new_offline();
         let embedding = embedder.embed(task_query).await.ok();
 
         let query = SearchQuery {

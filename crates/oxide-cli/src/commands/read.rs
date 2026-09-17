@@ -1,8 +1,8 @@
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{ReadGuardDecision, SessionReadGuard, TokenLedger};
-use oxide_parser::slicer::SymbolSlicer;
 use oxide_parser::Language;
 use oxide_parser::languages::get_extractor;
+use oxide_parser::slicer::SymbolSlicer;
 use std::path::Path;
 
 pub async fn handle_read(
@@ -31,10 +31,19 @@ pub async fn handle_read(
     // Surgical AST Symbol Slicing Mode
     if let Some(target_symbol) = symbol {
         let fid = oxide_core::FileId::from_relative_path(&*relative_path);
-        let language = if lang != Language::Unknown { lang } else { Language::Rust };
+        let language = if lang != Language::Unknown {
+            lang
+        } else {
+            Language::Rust
+        };
 
-        if let Some(sliced) = SymbolSlicer::extract_and_slice(&fid, &full_path, &content, target_symbol, language)? {
-            println!("// 🔍 Surgical Slice: {} ({:?}) [L{}-L{}]", sliced.name, sliced.kind, sliced.start_line, sliced.end_line);
+        if let Some(sliced) =
+            SymbolSlicer::extract_and_slice(&fid, &full_path, &content, target_symbol, language)?
+        {
+            println!(
+                "// 🔍 Surgical Slice: {} ({:?}) [L{}-L{}]",
+                sliced.name, sliced.kind, sliced.start_line, sliced.end_line
+            );
             if let Some(ref doc) = sliced.doc {
                 println!("/// Doc:\n/// {}", doc.replace('\n', "\n/// "));
             }

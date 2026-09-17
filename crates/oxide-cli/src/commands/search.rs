@@ -1,6 +1,6 @@
+use oxide_core::OxideManifest;
 use oxide_core::budget::{BudgetCandidate, TokenBudgetPacker};
 use oxide_core::error::{OxideError, Result};
-use oxide_core::OxideManifest;
 use oxide_db::{GraphTraversalService, ProjectStore, SearchQuery, SurrealProjectStore};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use std::path::Path;

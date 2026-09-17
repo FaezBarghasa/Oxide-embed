@@ -73,7 +73,10 @@ impl SymbolSlicer {
             .ok_or_else(|| OxideError::Parser(format!("Unsupported language: {:?}", language)))?;
         let symbols = extractor.extract_symbols(file_id, content);
 
-        if let Some(sym) = symbols.into_iter().find(|s| s.name == target_symbol || s.qualified_name.as_deref() == Some(target_symbol)) {
+        if let Some(sym) = symbols
+            .into_iter()
+            .find(|s| s.name == target_symbol || s.qualified_name.as_deref() == Some(target_symbol))
+        {
             let code = Self::slice_string_lines(content, sym.start_line, sym.end_line);
             Ok(Some(SlicedSymbol {
                 name: sym.name,
@@ -133,8 +136,14 @@ impl Motor {
 "#;
         let fid = FileId::from_relative_path("motor.rs");
         let path = Path::new("motor.rs");
-        let res = SymbolSlicer::extract_and_slice(&fid, path, rust_code, "set_speed", crate::Language::Rust)
-            .expect("slice");
+        let res = SymbolSlicer::extract_and_slice(
+            &fid,
+            path,
+            rust_code,
+            "set_speed",
+            crate::Language::Rust,
+        )
+        .expect("slice");
 
         assert!(res.is_some());
         let sym = res.unwrap();

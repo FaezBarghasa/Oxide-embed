@@ -15,7 +15,9 @@ pub mod memify;
 pub mod read_guard;
 pub mod symbol;
 
-pub use budget::{BudgetCandidate, BudgetItem, BudgetPackResult, TokenBudgetPacker, TokenEstimator};
+pub use budget::{
+    BudgetCandidate, BudgetItem, BudgetPackResult, TokenBudgetPacker, TokenEstimator,
+};
 pub use chunk::{ChunkKind, ChunkRecord};
 pub use cognify::{CognifyResult, DocReferenceEdge, DocSection};
 pub use condenser::{CondensedOutput, TerminalCondenser};

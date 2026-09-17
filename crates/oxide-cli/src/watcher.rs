@@ -1,14 +1,15 @@
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use oxide_core::FileRecord;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::id::{FileId, ProjectId};
-use oxide_core::FileRecord;
 use oxide_db::{ProjectStore, SurrealProjectStore};
-use oxide_ml::candle_embedder::CandleBertEmbedder;
 use oxide_ml::Embedder;
+use oxide_ml::candle_embedder::CandleBertEmbedder;
+use oxide_parser::Language;
 use oxide_parser::chunker::Chunker;
 use oxide_parser::doc_linker::DocLinker;
 use oxide_parser::languages::get_extractor;
-use oxide_parser::Language;
+use sha2::Digest;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
@@ -29,7 +30,8 @@ impl WorkspaceWatcher {
         let db_path = self.workspace_dir.join(".oxide").join("db");
         if !db_path.exists() {
             return Err(OxideError::Config(
-                "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first.".into(),
+                "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first."
+                    .into(),
             ));
         }
 
@@ -37,15 +39,15 @@ impl WorkspaceWatcher {
         let embedder = CandleBertEmbedder::new_offline();
         let chunker = Chunker::new(512);
 
-        println!("👀 [oxide-watch] Monitoring workspace: {}", self.workspace_dir.display());
+        println!(
+            "👀 [oxide-watch] Monitoring workspace: {}",
+            self.workspace_dir.display()
+        );
         println!("⚡ Incremental sub-millisecond AST re-indexing active. Press Ctrl+C to exit.");
 
         let (tx, rx) = channel();
-        let mut watcher = RecommendedWatcher::new(
-            tx,
-            Config::default(),
-        )
-        .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
+        let mut watcher = RecommendedWatcher::new(tx, Config::default())
+            .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
 
         watcher
             .watch(&self.workspace_dir, RecursiveMode::Recursive)
@@ -72,9 +74,14 @@ impl WorkspaceWatcher {
                 let batch: Vec<PathBuf> = pending_files.drain().collect();
                 for file_path in batch {
                     let start = Instant::now();
-                    match self.reindex_file(&file_path, &store, &embedder, &chunker).await {
+                    match self
+                        .reindex_file(&file_path, &store, &embedder, &chunker)
+                        .await
+                    {
                         Ok(sym_count) => {
-                            let rel = file_path.strip_prefix(&self.workspace_dir).unwrap_or(&file_path);
+                            let rel = file_path
+                                .strip_prefix(&self.workspace_dir)
+                                .unwrap_or(&file_path);
                             println!(
                                 "⚡ [oxide-watch] Re-indexed {} ({} symbols) in {:.2} ms",
                                 rel.display(),
@@ -83,7 +90,11 @@ impl WorkspaceWatcher {
                             );
                         }
                         Err(e) => {
-                            eprintln!("❌ [oxide-watch] Error indexing {}: {}", file_path.display(), e);
+                            eprintln!(
+                                "❌ [oxide-watch] Error indexing {}: {}",
+                                file_path.display(),
+                                e
+                            );
                         }
                     }
                 }
@@ -94,7 +105,10 @@ impl WorkspaceWatcher {
 
     fn should_index(&self, path: &Path) -> bool {
         let str_rep = path.to_string_lossy();
-        if str_rep.contains("/target/") || str_rep.contains("/.git/") || str_rep.contains("/.oxide/") {
+        if str_rep.contains("/target/")
+            || str_rep.contains("/.git/")
+            || str_rep.contains("/.oxide/")
+        {
             return false;
         }
 
@@ -127,7 +141,9 @@ impl WorkspaceWatcher {
             project_id: pid,
             relative_path: rel_str.clone(),
             language: lang_str,
-            content_hash: Some(oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(content.as_bytes()))),
+            content_hash: Some(oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(
+                content.as_bytes(),
+            ))),
             size_bytes: content.len() as u64,
             last_indexed_at: Some(chrono::Utc::now()),
         };

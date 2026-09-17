@@ -1,17 +1,17 @@
+use oxide_core::TerminalCondenser;
 use oxide_core::budget::BudgetCandidate;
 use oxide_core::context_builder::ContextSynthesizer;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::handoff::HandoffCheckpoint;
 use oxide_core::memify::CerebrumRule;
-use oxide_core::TerminalCondenser;
 use oxide_db::traversal::GraphTraversalService;
 use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
-use oxide_ml::candle_embedder::CandleBertEmbedder;
 use oxide_ml::Embedder;
-use oxide_parser::slicer::SymbolSlicer;
+use oxide_ml::candle_embedder::CandleBertEmbedder;
 use oxide_parser::Language;
+use oxide_parser::slicer::SymbolSlicer;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
@@ -249,13 +249,20 @@ impl McpServer {
                 let mut candidates = Vec::new();
                 let mut rules = Vec::new();
 
-                let cerebrum_path = self.workspace_dir.join(".oxide").join("docs").join("CEREBRUM.md");
+                let cerebrum_path = self
+                    .workspace_dir
+                    .join(".oxide")
+                    .join("docs")
+                    .join("CEREBRUM.md");
                 if cerebrum_path.exists() {
                     let c_text = std::fs::read_to_string(&cerebrum_path)?;
                     for (idx, line) in c_text.lines().enumerate() {
                         let trimmed = line.trim();
                         if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-                            let rule_str = trimmed.trim_start_matches("- ").trim_start_matches("* ").to_string();
+                            let rule_str = trimmed
+                                .trim_start_matches("- ")
+                                .trim_start_matches("* ")
+                                .to_string();
                             rules.push(CerebrumRule {
                                 id: format!("rule_{}", idx),
                                 title: format!("Rule {}", idx + 1),
@@ -280,7 +287,10 @@ impl McpServer {
                     };
                     if let Ok(hits) = st.search(&query).await {
                         for hit in hits {
-                            let title = hit.symbol_name.clone().unwrap_or_else(|| hit.file_path.clone());
+                            let title = hit
+                                .symbol_name
+                                .clone()
+                                .unwrap_or_else(|| hit.file_path.clone());
                             let score = hit.score;
                             candidates.push(BudgetCandidate::new(
                                 format!("{}:{}", hit.file_path, hit.start_line),
@@ -312,20 +322,31 @@ impl McpServer {
                 let lang = Language::from_path(&full_path);
                 let fid = oxide_core::id::FileId::from_relative_path(file_path);
 
-                if let Some(sym) = SymbolSlicer::extract_and_slice(&fid, &full_path, &content, symbol_name, lang)? {
+                if let Some(sym) =
+                    SymbolSlicer::extract_and_slice(&fid, &full_path, &content, symbol_name, lang)?
+                {
                     Ok(format!(
                         "// Symbol: {} ({:?}) [L{}-L{}]\n{}",
                         sym.name, sym.kind, sym.start_line, sym.end_line, sym.code
                     ))
                 } else {
-                    Ok(format!("Symbol '{}' not found in {}", symbol_name, file_path))
+                    Ok(format!(
+                        "Symbol '{}' not found in {}",
+                        symbol_name, file_path
+                    ))
                 }
             }
 
             "oxide_search" => {
                 let query_text = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
-                let budget = args.get("budget").and_then(|v| v.as_u64()).map(|b| b as usize);
-                let with_graph = args.get("with_graph").and_then(|v| v.as_bool()).unwrap_or(false);
+                let budget = args
+                    .get("budget")
+                    .and_then(|v| v.as_u64())
+                    .map(|b| b as usize);
+                let with_graph = args
+                    .get("with_graph")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
 
                 if let Some(st) = store {
                     let embedder = CandleBertEmbedder::new_offline();
@@ -342,11 +363,17 @@ impl McpServer {
                     let mut candidates = Vec::new();
 
                     for h in hits {
-                        let mut item_text = format!("### {} (L{}-L{})\n```\n{}\n```\n", h.file_path, h.start_line, h.end_line, h.text);
+                        let mut item_text = format!(
+                            "### {} (L{}-L{})\n```\n{}\n```\n",
+                            h.file_path, h.start_line, h.end_line, h.text
+                        );
                         if with_graph {
                             if let Some(ref sname) = h.symbol_name {
-                                if let Ok(Some(subgraph)) = GraphTraversalService::get_subgraph(st, sname, 2).await {
-                                    item_text.push_str(&format!("\n{}", subgraph.to_compact_string()));
+                                if let Ok(Some(subgraph)) =
+                                    GraphTraversalService::get_subgraph(st, sname, 2).await
+                                {
+                                    item_text
+                                        .push_str(&format!("\n{}", subgraph.to_compact_string()));
                                 }
                             }
                         }
@@ -360,11 +387,16 @@ impl McpServer {
 
                     if let Some(b) = budget {
                         let packed = oxide_core::budget::TokenBudgetPacker::pack(candidates, b);
-                        for item in packed.included {
+                        for item in &packed.included {
                             out.push_str(&item.content);
                             out.push('\n');
                         }
-                        out.push_str(&format!("\n*Packed {} items within {} token budget (used ~{} tokens)*", packed.included.len(), b, packed.used_tokens));
+                        out.push_str(&format!(
+                            "\n*Packed {} items within {} token budget (used ~{} tokens)*",
+                            packed.included.len(),
+                            b,
+                            packed.used_tokens
+                        ));
                     } else {
                         for item in candidates {
                             out.push_str(&item.content);
@@ -374,7 +406,10 @@ impl McpServer {
 
                     Ok(out)
                 } else {
-                    Err(OxideError::Config("Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index'.".into()))
+                    Err(OxideError::Config(
+                        "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index'."
+                            .into(),
+                    ))
                 }
             }
 
@@ -383,7 +418,9 @@ impl McpServer {
                 let hops = args.get("hops").and_then(|v| v.as_u64()).unwrap_or(2) as usize;
 
                 if let Some(st) = store {
-                    if let Some(subgraph) = GraphTraversalService::get_subgraph(st, symbol, hops).await? {
+                    if let Some(subgraph) =
+                        GraphTraversalService::get_subgraph(st, symbol, hops).await?
+                    {
                         Ok(subgraph.to_compact_string())
                     } else {
                         Ok(format!("Symbol '{}' not found in graph.", symbol))
@@ -395,16 +432,24 @@ impl McpServer {
 
             "oxide_condense" => {
                 let command = args.get("command").and_then(|v| v.as_str()).unwrap_or("");
-                let raw_output = args.get("raw_output").and_then(|v| v.as_str()).unwrap_or("");
+                let raw_output = args
+                    .get("raw_output")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
                 let exit_code = args.get("exit_code").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
 
                 let condenser = TerminalCondenser::new(512);
                 let cache_dir = self.workspace_dir.join(".oxide").join("cache").join("bash");
-                let condensed = condenser.condense(&cache_dir, command, raw_output, "", exit_code)?;
+                let condensed =
+                    condenser.condense(&cache_dir, command, raw_output, "", exit_code)?;
 
                 let log_str = condensed.cached_log_path.unwrap_or_else(|| "N/A".into());
                 let saved_pct = if condensed.original_bytes > 0 {
-                    (condensed.original_bytes.saturating_sub(condensed.condensed_bytes) as f64 / condensed.original_bytes as f64) * 100.0
+                    (condensed
+                        .original_bytes
+                        .saturating_sub(condensed.condensed_bytes) as f64
+                        / condensed.original_bytes as f64)
+                        * 100.0
                 } else {
                     0.0
                 };

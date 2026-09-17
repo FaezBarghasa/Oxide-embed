@@ -39,7 +39,12 @@ pub struct BudgetCandidate {
 }
 
 impl BudgetCandidate {
-    pub fn new(id: impl Into<String>, title: impl Into<String>, content: impl Into<String>, score: f32) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        content: impl Into<String>,
+        score: f32,
+    ) -> Self {
         let content_str = content.into();
         let tokens = TokenEstimator::estimate_tokens(&content_str);
         Self {
@@ -83,10 +88,7 @@ pub struct BudgetPackResult<T> {
 pub struct TokenBudgetPacker;
 
 impl TokenBudgetPacker {
-    pub fn pack<T: BudgetItem + Clone>(
-        items: Vec<T>,
-        budget_tokens: usize,
-    ) -> BudgetPackResult<T> {
+    pub fn pack<T: BudgetItem + Clone>(items: Vec<T>, budget_tokens: usize) -> BudgetPackResult<T> {
         let mut sorted = items;
         // Sort descending by score. Tie-break with smaller token footprint (higher density).
         sorted.sort_by(|a, b| {
@@ -125,7 +127,8 @@ mod tests {
 
     #[test]
     fn test_token_estimator() {
-        let text = "pub fn calculate_total(items: &[Item]) -> u64 { items.iter().map(|i| i.price).sum() }";
+        let text =
+            "pub fn calculate_total(items: &[Item]) -> u64 { items.iter().map(|i| i.price).sum() }";
         let est = TokenEstimator::estimate_tokens(text);
         assert!(est > 10 && est < 40);
         assert_eq!(TokenEstimator::estimate_tokens(""), 0);
@@ -134,8 +137,18 @@ mod tests {
     #[test]
     fn test_budget_packer_greedy_fitting() {
         let c1 = BudgetCandidate::new("c1", "High Priority", "short code", 10.0);
-        let c2 = BudgetCandidate::new("c2", "Medium Priority", "medium length code block with some explanation", 5.0);
-        let c3 = BudgetCandidate::new("c3", "Low Priority Huge", "a very long code block ".repeat(50), 1.0);
+        let c2 = BudgetCandidate::new(
+            "c2",
+            "Medium Priority",
+            "medium length code block with some explanation",
+            5.0,
+        );
+        let c3 = BudgetCandidate::new(
+            "c3",
+            "Low Priority Huge",
+            "a very long code block ".repeat(50),
+            1.0,
+        );
 
         let items = vec![c2.clone(), c3.clone(), c1.clone()];
         let packed = TokenBudgetPacker::pack(items, 30);

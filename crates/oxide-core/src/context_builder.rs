@@ -62,7 +62,10 @@ impl ContextSynthesizer {
         let packed = TokenBudgetPacker::pack(candidates, effective_budget);
 
         let mut md = String::new();
-        md.push_str(&format!("# 🧠 Oxide-Embed Cognitive Context (Budget: {} tokens)\n\n", token_budget));
+        md.push_str(&format!(
+            "# 🧠 Oxide-Embed Cognitive Context (Budget: {} tokens)\n\n",
+            token_budget
+        ));
         md.push_str(&format!("**Task**: `{}`\n\n", task_query));
 
         if !handoff_summary.is_empty() {
@@ -91,7 +94,10 @@ impl ContextSynthesizer {
         if !code_snippets.is_empty() {
             md.push_str("## 🧩 Relevant Symbols & Code Subgraphs\n");
             for snip in &code_snippets {
-                md.push_str(&format!("### {}\n```\n{}\n```\n\n", snip.title, snip.content));
+                md.push_str(&format!(
+                    "### {}\n```\n{}\n```\n\n",
+                    snip.title, snip.content
+                ));
             }
         }
 
@@ -115,7 +121,11 @@ mod tests {
 
     #[test]
     fn test_context_synthesizer_building() {
-        let handoff = HandoffCheckpoint::new("session_1", "Implement SPI Flash driver", "Run probe-rs test");
+        let handoff = HandoffCheckpoint::new(
+            "session_1",
+            "Implement SPI Flash driver",
+            "Run probe-rs test",
+        );
 
         let rules = vec![CerebrumRule {
             id: "rule_1".into(),
@@ -127,20 +137,21 @@ mod tests {
             created_at: 0,
         }];
 
-        let candidates = vec![
-            BudgetCandidate::new("sym_1", "fn init_spi", "pub fn init_spi() -> Result<()> { Ok(()) }", 50.0),
-        ];
+        let candidates = vec![BudgetCandidate::new(
+            "sym_1",
+            "fn init_spi",
+            "pub fn init_spi() -> Result<()> { Ok(()) }",
+            50.0,
+        )];
 
-        let ctx = ContextSynthesizer::build(
-            "configure SPI",
-            Some(handoff),
-            rules,
-            candidates,
-            1000,
-        );
+        let ctx =
+            ContextSynthesizer::build("configure SPI", Some(handoff), rules, candidates, 1000);
 
         assert!(ctx.formatted_markdown.contains("Active Project Objective"));
-        assert!(ctx.formatted_markdown.contains("Implement SPI Flash driver"));
+        assert!(
+            ctx.formatted_markdown
+                .contains("Implement SPI Flash driver")
+        );
         assert!(ctx.formatted_markdown.contains("Never use unwrap"));
         assert!(ctx.formatted_markdown.contains("fn init_spi"));
         assert!(ctx.used_tokens <= 1000);
