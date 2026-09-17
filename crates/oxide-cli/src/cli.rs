@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "oxide-embed")]
 #[command(author = "Faez Barghasa")]
-#[command(version = "0.1.0")]
+#[command(version = "0.3.0")]
 #[command(about = "Local, portable, AST-aware memory and embedding engine for AI coding agents", long_about = None)]
 pub struct Cli {
     #[arg(
@@ -191,7 +191,12 @@ pub enum Commands {
 
     #[command(about = "Automatically install and configure Oxide-embed hooks for AI agents")]
     InstallHook {
-        #[arg(short, long, default_value = "all", help = "Target tool: all, antigravity, claude, cursor")]
+        #[arg(
+            short,
+            long,
+            default_value = "all",
+            help = "Target tool: all, antigravity, claude, cursor"
+        )]
         tool: String,
     },
 

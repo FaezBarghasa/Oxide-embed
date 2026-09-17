@@ -164,6 +164,8 @@ impl Language {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Rust => "rust",
+            Self::C => "c",
+            Self::Cpp => "cpp",
             Self::Python => "python",
             Self::JavaScript => "javascript",
             Self::TypeScript => "typescript",
