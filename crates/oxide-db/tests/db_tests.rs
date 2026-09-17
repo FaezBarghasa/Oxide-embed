@@ -147,3 +147,91 @@ async fn test_surreal_db_crud_and_traversal() {
     assert!(compact.contains("[Target] init_hardware"));
     assert!(compact.contains("[Callers]"));
 }
+
+#[tokio::test]
+async fn test_typed_semantic_memory_crud_and_recall() {
+    let temp_dir = std::env::temp_dir().join("oxide_test_memory_crud");
+    let _ = std::fs::remove_dir_all(&temp_dir);
+
+    let store = SurrealProjectStore::open(&temp_dir)
+        .await
+        .expect("open surreal store");
+
+    let proj_id = ProjectId::new_v7();
+
+    // 1. Upsert a Decision Memory
+    let mut mem_decision = oxide_core::MemoryRecord::new(
+        proj_id.clone(),
+        oxide_core::MemoryKind::Decision,
+        "Embedded HAL Architecture",
+        "Always use RTIC v2 and pure no_std for STM32 targets",
+    );
+    mem_decision.tags = vec!["stm32".into(), "embedded".into()];
+    mem_decision.symbol_ref = Some("init_hardware".into());
+
+    let emb1 = vec![0.8f32; 384];
+    store
+        .upsert_memory(&mem_decision, Some(emb1.clone()))
+        .await
+        .expect("upsert decision memory");
+
+    // 2. Fetch by ID
+    let fetched = store
+        .get_memory(&mem_decision.id)
+        .await
+        .expect("get memory")
+        .expect("memory exists");
+    assert_eq!(fetched.title, "Embedded HAL Architecture");
+    assert_eq!(fetched.kind, oxide_core::MemoryKind::Decision);
+    assert_eq!(fetched.tags, vec!["stm32", "embedded"]);
+
+    // 3. Upsert a Preference Memory
+    let mem_pref = oxide_core::MemoryRecord::new(
+        proj_id.clone(),
+        oxide_core::MemoryKind::Preference,
+        "Zero Unwrap Rule",
+        "Avoid unwrap in production code; use typed Result<T, E>",
+    );
+    store
+        .upsert_memory(&mem_pref, Some(vec![0.1f32; 384]))
+        .await
+        .expect("upsert pref memory");
+
+    // 4. Recall memories filtered by kind and vector
+    let recalled_decisions = store
+        .recall_memories(
+            Some(&emb1),
+            Some(oxide_core::MemoryKind::Decision),
+            &[],
+            None,
+            5,
+        )
+        .await
+        .expect("recall decisions");
+    assert_eq!(recalled_decisions.len(), 1);
+    assert_eq!(recalled_decisions[0].title, "Embedded HAL Architecture");
+
+    // 5. Active rules listing
+    let active_rules = store.list_active_rules().await.expect("list active rules");
+    assert_eq!(active_rules.len(), 2);
+
+    // 6. Conflict detection
+    let conflicting_emb = vec![0.79f32; 384];
+    let conflicts = store
+        .find_conflicts(
+            oxide_core::MemoryKind::Decision,
+            &conflicting_emb,
+            0.75,
+        )
+        .await
+        .expect("find conflicts");
+    assert_eq!(conflicts.len(), 1);
+    assert_eq!(conflicts[0].id, mem_decision.id);
+
+    // 7. Link memory to symbol
+    let sym_id = SymbolId::new(&FileId::from_relative_path("src/core.rs"), "init_hardware");
+    store
+        .link_memory_to_symbol(&mem_decision.id, &sym_id, "governs")
+        .await
+        .expect("link memory to symbol");
+}

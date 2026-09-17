@@ -1,8 +1,12 @@
 use crate::schema::INITIAL_SCHEMA_SURQL;
 use crate::store::{ProjectStore, SearchHit, SearchQuery};
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use oxide_core::error::{OxideError, Result};
-use oxide_core::{ChunkRecord, FileRecord, SymbolRecord};
+use oxide_core::{
+    ChunkRecord, FileRecord, MemoryId, MemoryKind, MemoryRecord, MemoryStatus, ProjectId,
+    SymbolId, SymbolRecord,
+};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use surrealdb::Surreal;
@@ -50,6 +54,74 @@ struct RawChunkResult {
     outline: Option<String>,
     text: String,
     embedding: Option<Vec<f32>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MemoryRow {
+    id: serde_json::Value,
+    project_id: String,
+    session_id: Option<String>,
+    kind: String,
+    title: String,
+    content: String,
+    tags: Vec<String>,
+    symbol_ref: Option<String>,
+    status: String,
+    superseded_by: Option<String>,
+    embedding: Option<Vec<f32>>,
+    created_at: DateTime<Utc>,
+    valid_until: Option<DateTime<Utc>>,
+}
+
+impl MemoryRow {
+    fn to_memory_record(self) -> Result<MemoryRecord> {
+        let raw_id = match &self.id {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Object(map) => map
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            _ => self.id.to_string(),
+        };
+        let clean_id = raw_id
+            .replace("memory_record:", "")
+            .replace('`', "")
+            .replace('"', "")
+            .trim()
+            .to_string();
+
+        let kind: MemoryKind = self.kind.parse()?;
+        let status = match self.status.as_str() {
+            "active" => MemoryStatus::Active,
+            "superseded" => MemoryStatus::Superseded,
+            "contradicted" => MemoryStatus::Contradicted,
+            _ => MemoryStatus::Active,
+        };
+        Ok(MemoryRecord {
+            id: MemoryId::from_string(clean_id),
+            project_id: ProjectId(
+                uuid::Uuid::parse_str(&self.project_id).unwrap_or_else(|_| uuid::Uuid::nil()),
+            ),
+            session_id: self.session_id,
+            kind,
+            title: self.title,
+            content: self.content,
+            tags: self.tags,
+            symbol_ref: self.symbol_ref,
+            status,
+            superseded_by: self.superseded_by.map(MemoryId::from_string),
+            created_at: self.created_at,
+            valid_until: self.valid_until,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ConflictRow {
+    #[serde(flatten)]
+    mem: MemoryRow,
+    score: Option<f32>,
 }
 
 #[async_trait]
@@ -262,6 +334,191 @@ impl ProjectStore for SurrealProjectStore {
             .bind(("imported_path", edge.imported_path.clone()))
             .bind(("imported_symbols", edge.imported_symbols.clone()))
             .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn upsert_memory(
+        &self,
+        memory: &MemoryRecord,
+        embedding: Option<Vec<f32>>,
+    ) -> Result<()> {
+        let id_str = memory.id.0.clone();
+        let sql = r#"
+            UPSERT type::record('memory_record', $id) SET
+                project_id = $project_id,
+                session_id = $session_id,
+                kind = $kind,
+                title = $title,
+                content = $content,
+                tags = $tags,
+                symbol_ref = $symbol_ref,
+                status = $status,
+                superseded_by = $superseded_by,
+                embedding = $embedding,
+                created_at = $created_at,
+                valid_until = $valid_until;
+        "#;
+        let res = self
+            .db
+            .query(sql)
+            .bind(("id", id_str))
+            .bind(("project_id", memory.project_id.0.to_string()))
+            .bind(("session_id", memory.session_id.clone()))
+            .bind(("kind", memory.kind.as_str().to_string()))
+            .bind(("title", memory.title.clone()))
+            .bind(("content", memory.content.clone()))
+            .bind(("tags", memory.tags.clone()))
+            .bind(("symbol_ref", memory.symbol_ref.clone()))
+            .bind(("status", memory.status.to_string()))
+            .bind((
+                "superseded_by",
+                memory.superseded_by.as_ref().map(|s| s.0.clone()),
+            ))
+            .bind(("embedding", embedding))
+            .bind(("created_at", memory.created_at))
+            .bind(("valid_until", memory.valid_until))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn get_memory(&self, id: &MemoryId) -> Result<Option<MemoryRecord>> {
+        let sql =
+            "SELECT * FROM memory_record WHERE id = type::record('memory_record', $id) LIMIT 1;";
+        let mut res = self
+            .db
+            .query(sql)
+            .bind(("id", id.0.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
+        if let Some(row) = rows.into_iter().next() {
+            Ok(Some(row.to_memory_record()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn recall_memories(
+        &self,
+        query_emb: Option<&[f32]>,
+        kind: Option<MemoryKind>,
+        tags: &[String],
+        as_of: Option<DateTime<Utc>>,
+        limit: usize,
+    ) -> Result<Vec<MemoryRecord>> {
+        let mut conditions = Vec::new();
+        if let Some(k) = kind {
+            conditions.push(format!("kind = '{}'", k.as_str()));
+        }
+        if let Some(cutoff) = as_of {
+            conditions.push(format!(
+                "created_at <= '{}' AND (valid_until IS NONE OR valid_until > '{}')",
+                cutoff.to_rfc3339(),
+                cutoff.to_rfc3339()
+            ));
+        } else {
+            conditions.push("status = 'active'".to_string());
+        }
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
+        let sql = if query_emb.is_some() {
+            format!(
+                "SELECT *, vector::similarity::cosine(embedding, $emb) AS score FROM memory_record {} ORDER BY score DESC LIMIT $limit;",
+                where_clause
+            )
+        } else {
+            format!(
+                "SELECT * FROM memory_record {} ORDER BY created_at DESC LIMIT $limit;",
+                where_clause
+            )
+        };
+
+        let mut query = self.db.query(&sql).bind(("limit", limit as i64));
+        if let Some(emb) = query_emb {
+            query = query.bind(("emb", emb.to_vec()));
+        }
+        let mut res = query
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
+        let mut records = Vec::new();
+        for r in rows {
+            let rec = r.to_memory_record()?;
+            if tags.is_empty() || tags.iter().any(|t| rec.tags.contains(t)) {
+                records.push(rec);
+            }
+        }
+        Ok(records)
+    }
+
+    async fn find_conflicts(
+        &self,
+        kind: MemoryKind,
+        embedding: &[f32],
+        threshold: f32,
+    ) -> Result<Vec<MemoryRecord>> {
+        let sql = "SELECT *, vector::similarity::cosine(embedding, $emb) AS score FROM memory_record WHERE kind = $kind AND status = 'active' AND embedding IS NOT NONE ORDER BY score DESC LIMIT 5;";
+        let mut res = self
+            .db
+            .query(sql)
+            .bind(("kind", kind.as_str().to_string()))
+            .bind(("emb", embedding.to_vec()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+
+        let rows: Vec<ConflictRow> = take_vec(&mut res, 0)?;
+        let mut conflicts = Vec::new();
+        for r in rows {
+            if r.score.unwrap_or(0.0) >= threshold {
+                conflicts.push(r.mem.to_memory_record()?);
+            }
+        }
+        Ok(conflicts)
+    }
+
+    async fn list_active_rules(&self) -> Result<Vec<MemoryRecord>> {
+        let sql = "SELECT * FROM memory_record WHERE status = 'active' AND kind IN ['instruction', 'decision', 'preference', 'fact'] ORDER BY created_at DESC LIMIT 50;";
+        let mut res = self
+            .db
+            .query(sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
+        rows.into_iter().map(|r| r.to_memory_record()).collect()
+    }
+
+    async fn link_memory_to_symbol(
+        &self,
+        mem_id: &MemoryId,
+        symbol_id: &SymbolId,
+        relation: &str,
+    ) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('governs', $id) SET
+                in = type::record('memory_record', $mem_id),
+                out = type::record('symbol', $sym_id),
+                relation = $relation,
+                created_at = time::now();
+        "#;
+        let edge_id = format!("{}_{}", mem_id.0, symbol_id.0);
+        let res = self
+            .db
+            .query(sql)
+            .bind(("id", edge_id))
+            .bind(("mem_id", mem_id.0.clone()))
+            .bind(("sym_id", symbol_id.0.clone()))
+            .bind(("relation", relation.to_string()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
             .map_err(|e| OxideError::Database(e.to_string()))?;
         Ok(())
     }
