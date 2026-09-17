@@ -1,0 +1,26 @@
+# Maintainer: Faez Barghasa <faez@oxide-tech.io>
+pkgname=oxide-embed
+pkgver=0.2.0
+pkgrel=0
+pkgdesc="Offline-first AST-aware context engine, GraphRAG memory, and MCP server for AI coding agents"
+url="https://github.com/FaezBarghasa/Oxide-embed"
+arch="x86_64 aarch64"
+license="MIT OR Apache-2.0"
+makedepends="cargo rust"
+source="$pkgname-$pkgver.tar.gz::https://github.com/FaezBarghasa/Oxide-embed/archive/v$pkgver.tar.gz"
+builddir="$srcdir/Oxide-embed-$pkgver"
+
+build() {
+    cargo build --release --locked
+}
+
+check() {
+    cargo test --release --workspace
+}
+
+package() {
+    install -Dm755 target/release/oxide-embed "$pkgdir"/usr/bin/oxide-embed
+    install -Dm644 packaging/systemd/oxide-watch.service "$pkgdir"/usr/lib/systemd/user/oxide-watch.service
+    install -Dm644 README.md "$pkgdir"/usr/share/doc/$pkgname/README.md
+    install -Dm644 CHANGELOG.md "$pkgdir"/usr/share/doc/$pkgname/CHANGELOG.md
+}

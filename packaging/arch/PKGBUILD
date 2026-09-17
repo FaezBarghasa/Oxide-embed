@@ -1,0 +1,31 @@
+# Maintainer: Faez Barghasa <faez.barghasa@gmail.com>
+pkgname=oxide-embed
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Local-first code graph indexing, cognitive memory, and context hygiene engine in Rust"
+arch=('x86_64' 'aarch64')
+url="https://github.com/FaezBarghasa/Oxide-embed"
+license=('Apache-2.0')
+depends=('gcc-libs')
+makedepends=('cargo' 'rust')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/FaezBarghasa/Oxide-embed/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver"
+    cargo build --release --locked -p oxide-cli
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    cargo test --release --locked --workspace
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 "target/release/oxide-embed" "$pkgdir/usr/bin/oxide-embed"
+    install -Dm644 "packaging/systemd/oxide-watch.service" "$pkgdir/usr/lib/systemd/user/oxide-watch.service"
+    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 "CHANGELOG.md" "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
+    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

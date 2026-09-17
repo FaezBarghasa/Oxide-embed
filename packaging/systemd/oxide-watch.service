@@ -1,0 +1,15 @@
+[Unit]
+Description=Oxide-Embed Incremental Workspace Watcher Daemon
+Documentation=https://github.com/FaezBarghasa/Oxide-embed
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/oxide-embed watch
+Restart=on-failure
+RestartSec=3s
+Environment=RUST_LOG=info
+Environment=RUST_BACKTRACE=1
+
+[Install]
+WantedBy=default.target

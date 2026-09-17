@@ -1,0 +1,13 @@
+Package: oxide-embed
+Version: 0.2.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Faez Barghasa <faez.barghasa@gmail.com>
+Depends: libc6 (>= 2.34), libgcc-s1 (>= 4.2)
+Description: Local-first code graph indexing, cognitive memory, and context hygiene engine
+ Oxide-Embed is an ultra-fast, local-first code graph and memory engine engineered
+ in pure Rust. It combines Tree-sitter AST extraction, Hugging Face Candle
+ embeddings, SurrealDB 3.x embedded graph storage, terminal error condensing,
+ session handover state tracking, and Model Context Protocol (MCP) server capabilities.
+ Homepage: https://github.com/FaezBarghasa/Oxide-embed
