@@ -1,9 +1,8 @@
-use anyhow::Result;
 use oxide_core::budget::BudgetCandidate;
 use oxide_core::context_builder::ContextSynthesizer;
+use oxide_core::error::{OxideError, Result};
 use oxide_core::handoff::HandoffCheckpoint;
 use oxide_core::memify::CerebrumRule;
-use oxide_core::read_guard::SessionReadGuard;
 use oxide_core::TerminalCondenser;
 use oxide_db::traversal::GraphTraversalService;
 use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
@@ -14,7 +13,7 @@ use oxide_parser::Language;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct JsonRpcRequest {
@@ -241,7 +240,7 @@ impl McpServer {
 
                 let handoff_path = self.workspace_dir.join(".oxide").join("STATUS.md");
                 let handoff = if handoff_path.exists() {
-                    let content = std::fs::read_to_string(&handoff_path).unwrap_or_default();
+                    let content = std::fs::read_to_string(&handoff_path)?;
                     HandoffCheckpoint::parse_markdown(&content)
                 } else {
                     None
@@ -252,7 +251,7 @@ impl McpServer {
 
                 let cerebrum_path = self.workspace_dir.join(".oxide").join("docs").join("CEREBRUM.md");
                 if cerebrum_path.exists() {
-                    let c_text = std::fs::read_to_string(&cerebrum_path).unwrap_or_default();
+                    let c_text = std::fs::read_to_string(&cerebrum_path)?;
                     for (idx, line) in c_text.lines().enumerate() {
                         let trimmed = line.trim();
                         if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
@@ -271,7 +270,7 @@ impl McpServer {
                 }
 
                 if let Some(st) = store {
-                    let embedder = CandleBertEmbedder::new();
+                    let embedder = CandleBertEmbedder::new_offline();
                     let embedding = embedder.embed(task).await.ok();
                     let query = SearchQuery {
                         text: task.to_string(),
@@ -281,7 +280,7 @@ impl McpServer {
                     };
                     if let Ok(hits) = st.search(&query).await {
                         for hit in hits {
-                            let title = hit.symbol_name.clone().unwrap_or(hit.file_path.clone());
+                            let title = hit.symbol_name.clone().unwrap_or_else(|| hit.file_path.clone());
                             let score = hit.score;
                             candidates.push(BudgetCandidate::new(
                                 format!("{}:{}", hit.file_path, hit.start_line),
@@ -303,11 +302,14 @@ impl McpServer {
 
                 let full_path = self.workspace_dir.join(file_path);
                 if !full_path.exists() {
-                    return Err(anyhow::anyhow!("File not found: {}", file_path));
+                    return Err(OxideError::Io(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("File not found: {}", file_path),
+                    )));
                 }
 
                 let content = std::fs::read_to_string(&full_path)?;
-                let lang = Language::from_path(&full_path).unwrap_or(Language::Rust);
+                let lang = Language::from_path(&full_path);
                 let fid = oxide_core::id::FileId::from_relative_path(file_path);
 
                 if let Some(sym) = SymbolSlicer::extract_and_slice(&fid, &full_path, &content, symbol_name, lang)? {
@@ -326,7 +328,7 @@ impl McpServer {
                 let with_graph = args.get("with_graph").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Some(st) = store {
-                    let embedder = CandleBertEmbedder::new();
+                    let embedder = CandleBertEmbedder::new_offline();
                     let embedding = embedder.embed(query_text).await.ok();
                     let query = SearchQuery {
                         text: query_text.to_string(),
@@ -372,7 +374,7 @@ impl McpServer {
 
                     Ok(out)
                 } else {
-                    Err(anyhow::anyhow!("Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index'."))
+                    Err(OxideError::Config("Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index'.".into()))
                 }
             }
 
@@ -387,7 +389,7 @@ impl McpServer {
                         Ok(format!("Symbol '{}' not found in graph.", symbol))
                     }
                 } else {
-                    Err(anyhow::anyhow!("Oxide database not found."))
+                    Err(OxideError::Config("Oxide database not found.".into()))
                 }
             }
 
@@ -398,20 +400,27 @@ impl McpServer {
 
                 let condenser = TerminalCondenser::new(512);
                 let cache_dir = self.workspace_dir.join(".oxide").join("cache").join("bash");
-                let condensed = condenser.condense(command, exit_code, raw_output, &cache_dir)?;
+                let condensed = condenser.condense(&cache_dir, command, raw_output, "", exit_code)?;
+
+                let log_str = condensed.cached_log_path.unwrap_or_else(|| "N/A".into());
+                let saved_pct = if condensed.original_bytes > 0 {
+                    (condensed.original_bytes.saturating_sub(condensed.condensed_bytes) as f64 / condensed.original_bytes as f64) * 100.0
+                } else {
+                    0.0
+                };
 
                 Ok(format!(
                     "Exit Code: {}\nCached: {}\n\n{}\n[Summary] Original: {} B, Condensed: {} B (Saved {:.1}%)",
                     condensed.exit_code,
-                    condensed.log_path,
+                    log_str,
                     condensed.condensed_text,
                     condensed.original_bytes,
                     condensed.condensed_bytes,
-                    condensed.savings_percentage()
+                    saved_pct
                 ))
             }
 
-            _ => Err(anyhow::anyhow!("Unknown tool: {}", tool_name)),
+            _ => Err(OxideError::Config(format!("Unknown tool: {}", tool_name))),
         }
     }
 }

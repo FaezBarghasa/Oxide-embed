@@ -99,6 +99,46 @@ impl HandoffCheckpoint {
         let content = fs::read_to_string(status_path)?;
         Ok(content)
     }
+
+    pub fn parse_markdown(content: &str) -> Option<Self> {
+        let mut session_id = "default".to_string();
+        let mut active_goal = "Active Task".to_string();
+        let mut next_action = "Continue implementation".to_string();
+        let mut completed_tasks = Vec::new();
+        let mut pending_tasks = Vec::new();
+        let mut key_decisions = Vec::new();
+        let mut modified_files = Vec::new();
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("- **Session ID**:") {
+                session_id = trimmed.trim_start_matches("- **Session ID**:").trim().to_string();
+            } else if trimmed.starts_with("- **Active Goal**:") {
+                active_goal = trimmed.trim_start_matches("- **Active Goal**:").trim().to_string();
+            } else if trimmed.starts_with("> ") {
+                next_action = trimmed.trim_start_matches("> ").trim().to_string();
+            } else if trimmed.starts_with("- [x] ") {
+                completed_tasks.push(trimmed.trim_start_matches("- [x] ").trim().to_string());
+            } else if trimmed.starts_with("- [ ] ") {
+                pending_tasks.push(trimmed.trim_start_matches("- [ ] ").trim().to_string());
+            } else if trimmed.starts_with("- `") && trimmed.ends_with('`') {
+                modified_files.push(trimmed.trim_matches(|c| c == '-' || c == '`' || c == ' ').to_string());
+            } else if trimmed.starts_with("- ") && !trimmed.contains("**") {
+                key_decisions.push(trimmed.trim_start_matches("- ").trim().to_string());
+            }
+        }
+
+        Some(Self {
+            session_id,
+            timestamp: chrono::Utc::now().timestamp(),
+            active_goal,
+            completed_tasks,
+            pending_tasks,
+            key_decisions,
+            modified_files,
+            next_action,
+        })
+    }
 }
 
 #[cfg(test)]

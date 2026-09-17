@@ -1,6 +1,7 @@
-use anyhow::Result;
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use oxide_core::id::FileId;
+use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use oxide_core::error::{OxideError, Result};
+use oxide_core::id::{FileId, ProjectId};
+use oxide_core::FileRecord;
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::candle_embedder::CandleBertEmbedder;
 use oxide_ml::Embedder;
@@ -27,21 +28,28 @@ impl WorkspaceWatcher {
     pub async fn run(&self) -> Result<()> {
         let db_path = self.workspace_dir.join(".oxide").join("db");
         if !db_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first."
+            return Err(OxideError::Config(
+                "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first.".into(),
             ));
         }
 
         let store = SurrealProjectStore::open(&db_path).await?;
-        let embedder = CandleBertEmbedder::new();
+        let embedder = CandleBertEmbedder::new_offline();
         let chunker = Chunker::new(512);
 
         println!("👀 [oxide-watch] Monitoring workspace: {}", self.workspace_dir.display());
         println!("⚡ Incremental sub-millisecond AST re-indexing active. Press Ctrl+C to exit.");
 
         let (tx, rx) = channel();
-        let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
-        watcher.watch(&self.workspace_dir, RecursiveMode::Recursive)?;
+        let mut watcher = RecommendedWatcher::new(
+            tx,
+            Config::default(),
+        )
+        .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
+
+        watcher
+            .watch(&self.workspace_dir, RecursiveMode::Recursive)
+            .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
 
         let mut last_processed = Instant::now();
         let mut pending_files: HashSet<PathBuf> = HashSet::new();
@@ -90,7 +98,8 @@ impl WorkspaceWatcher {
             return false;
         }
 
-        Language::from_path(path).is_some() || path.extension().and_then(|s| s.to_str()) == Some("md")
+        let lang = Language::from_path(path);
+        lang != Language::Unknown || path.extension().and_then(|s| s.to_str()) == Some("md")
     }
 
     async fn reindex_file(
@@ -104,14 +113,30 @@ impl WorkspaceWatcher {
         let rel_path = path.strip_prefix(&self.workspace_dir).unwrap_or(path);
         let rel_str = rel_path.to_string_lossy().to_string();
         let fid = FileId::from_relative_path(&rel_str);
+        let pid = ProjectId::new_v7();
 
-        let file_rec = oxide_core::FileRecord::new(&rel_str, &content);
+        let lang = Language::from_path(path);
+        let lang_str = if lang != Language::Unknown {
+            Some(format!("{:?}", lang).to_lowercase())
+        } else {
+            None
+        };
+
+        let file_rec = FileRecord {
+            id: fid.clone(),
+            project_id: pid,
+            relative_path: rel_str.clone(),
+            language: lang_str,
+            content_hash: Some(oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(content.as_bytes()))),
+            size_bytes: content.len() as u64,
+            last_indexed_at: Some(chrono::Utc::now()),
+        };
         store.upsert_file(&file_rec).await?;
 
         let mut sym_count = 0;
 
-        if let Some(lang) = Language::from_path(path) {
-            if let Ok(ext) = get_extractor(lang) {
+        if lang != Language::Unknown {
+            if let Some(ext) = get_extractor(lang) {
                 let symbols = ext.extract_symbols(&fid, &content);
                 sym_count = symbols.len();
 
