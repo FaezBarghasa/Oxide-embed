@@ -1,0 +1,35 @@
+{
+  "project_name": "scripts",
+  "root_path": "/home/jrad/RustroverProjects/Oxide-embed/scripts",
+  "files": {
+    "install.sh": {
+      "relative_path": "install.sh",
+      "language": "bash",
+      "size_bytes": 4921,
+      "line_count": 127,
+      "content_hash": "4bc3190f875498168fff9341d2ee14567b7a6ef99b52dd84fc15925f4a9e28b7",
+      "symbols": [],
+      "last_scanned_at": "2026-09-17T09:26:32.331061160Z"
+    },
+    "package-deb.sh": {
+      "relative_path": "package-deb.sh",
+      "language": "bash",
+      "size_bytes": 2561,
+      "line_count": 63,
+      "content_hash": "045cdb96399fc6e78880841ed62f41e4bbffdf39e7d83b485f2b8e168958e7da",
+      "symbols": [],
+      "last_scanned_at": "2026-09-17T09:26:32.330562492Z"
+    },
+    "build-dist.sh": {
+      "relative_path": "build-dist.sh",
+      "language": "bash",
+      "size_bytes": 2406,
+      "line_count": 65,
+      "content_hash": "bc438adbf6c5e7c9a916b4a1f2ee1eaac5f9814b47a5c53608c86420ffb9b00e",
+      "symbols": [],
+      "last_scanned_at": "2026-09-17T09:26:32.331286748Z"
+    }
+  },
+  "total_symbols": 0,
+  "last_updated": "2026-09-17T09:26:32.331293872Z"
+}
