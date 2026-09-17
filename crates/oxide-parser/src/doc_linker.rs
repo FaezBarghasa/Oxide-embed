@@ -8,37 +8,39 @@ impl DocLinker {
     pub fn extract_doc_sections(file_path: &str, content: &str) -> Vec<DocSection> {
         let mut sections = Vec::new();
         let mut current_heading = "Overview".to_string();
-        let mut current_lines = Vec::new();
+        let mut current_lines: Vec<&str> = Vec::new();
         let mut section_index = 0;
 
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with('#') {
-                if !current_lines.is_empty() {
+                let has_content = current_lines.iter().any(|l| !l.trim().is_empty());
+                if has_content {
                     let section_id = format!("{}:{}", file_path, section_index);
                     sections.push(DocSection {
                         id: section_id,
                         file_path: file_path.to_string(),
                         heading: current_heading.clone(),
-                        content: current_lines.join("\n"),
+                        content: current_lines.join("\n").trim().to_string(),
                         embedding: None,
                     });
                     section_index += 1;
-                    current_lines.clear();
                 }
+                current_lines.clear();
                 current_heading = trimmed.trim_start_matches('#').trim().to_string();
             } else {
                 current_lines.push(line);
             }
         }
 
-        if !current_lines.is_empty() {
+        let has_content = current_lines.iter().any(|l| !l.trim().is_empty());
+        if has_content {
             let section_id = format!("{}:{}", file_path, section_index);
             sections.push(DocSection {
                 id: section_id,
                 file_path: file_path.to_string(),
                 heading: current_heading,
-                content: current_lines.join("\n"),
+                content: current_lines.join("\n").trim().to_string(),
                 embedding: None,
             });
         }

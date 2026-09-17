@@ -76,6 +76,9 @@ tokenizers = { version = "0.23.2", default-features = false, features = [
     "onig",
 ] }
 
+# Benchmarking & Property Testing
+criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
+
 [profile.release]
 opt-level = 3
 lto = "fat"

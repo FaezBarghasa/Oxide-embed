@@ -200,8 +200,13 @@ impl ProjectStore for SurrealProjectStore {
                 context = $context,
                 created_at = time::now();
         "#;
-        let edge_id = format!("{}:{}", edge.doc_section_id, edge.symbol_id.0);
-        self.db
+        let edge_id = format!(
+            "{}_{}",
+            edge.doc_section_id.replace(':', "_"),
+            edge.symbol_id.0
+        );
+        let res = self
+            .db
             .query(sql)
             .bind(("id", edge_id))
             .bind(("doc_id", edge.doc_section_id.clone()))
@@ -209,6 +214,8 @@ impl ProjectStore for SurrealProjectStore {
             .bind(("sym_name", edge.symbol_id.0.clone()))
             .bind(("context", edge.context.clone()))
             .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
             .map_err(|e| OxideError::Database(e.to_string()))?;
         Ok(())
     }
@@ -224,14 +231,17 @@ impl ProjectStore for SurrealProjectStore {
                 weight = 1.0,
                 valid_from = time::now();
         "#;
-        let edge_id = format!("{}:{}", edge.caller_symbol_id.0, edge.callee_name);
-        self.db
+        let edge_id = format!("{}_{}", edge.caller_symbol_id.0, edge.callee_name);
+        let res = self
+            .db
             .query(sql)
             .bind(("id", edge_id))
             .bind(("caller_id", edge.caller_symbol_id.0.clone()))
             .bind(("callee_name", edge.callee_name.clone()))
             .bind(("line", edge.line as i64))
             .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
             .map_err(|e| OxideError::Database(e.to_string()))?;
         Ok(())
     }

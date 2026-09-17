@@ -50,9 +50,12 @@ DEFINE FIELD status ON oxide_migration TYPE string;
 DEFINE FIELD backup_path ON oxide_migration TYPE option<string>;
 
 -- Cognee Cognitive Graph Tables
-DEFINE TABLE calls SCHEMAFULL TYPE RELATION;
+DEFINE TABLE calls SCHEMAFULL;
 DEFINE FIELD in ON calls TYPE record<symbol>;
 DEFINE FIELD out ON calls TYPE record<symbol>;
+DEFINE FIELD caller_name ON calls TYPE option<string>;
+DEFINE FIELD callee_name ON calls TYPE option<string>;
+DEFINE FIELD line ON calls TYPE option<int>;
 DEFINE FIELD weight ON calls TYPE float DEFAULT 1.0;
 DEFINE FIELD traversal_count ON calls TYPE int DEFAULT 0;
 DEFINE FIELD last_traversed_at ON calls TYPE option<datetime>;
@@ -60,15 +63,16 @@ DEFINE FIELD valid_from ON calls TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_to ON calls TYPE option<datetime>;
 DEFINE INDEX idx_calls_active ON calls FIELDS valid_to;
 
-DEFINE TABLE contains SCHEMAFULL TYPE RELATION;
+DEFINE TABLE contains SCHEMAFULL;
 DEFINE FIELD in ON contains TYPE record<file>;
 DEFINE FIELD out ON contains TYPE record<symbol>;
 DEFINE FIELD valid_from ON contains TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_to ON contains TYPE option<datetime>;
 
-DEFINE TABLE imports SCHEMAFULL TYPE RELATION;
+DEFINE TABLE imports SCHEMAFULL;
 DEFINE FIELD in ON imports TYPE record<file>;
 DEFINE FIELD out ON imports TYPE record<file>;
+DEFINE FIELD imported_path ON imports TYPE option<string>;
 DEFINE FIELD imported_symbols ON imports TYPE array<string>;
 DEFINE FIELD weight ON imports TYPE float DEFAULT 1.0;
 
@@ -78,9 +82,10 @@ DEFINE FIELD heading ON doc_section TYPE string;
 DEFINE FIELD content ON doc_section TYPE string;
 DEFINE FIELD embedding ON doc_section TYPE option<array<float>>;
 
-DEFINE TABLE doc_reference SCHEMAFULL TYPE RELATION;
+DEFINE TABLE doc_reference SCHEMAFULL;
 DEFINE FIELD in ON doc_reference TYPE record<doc_section>;
 DEFINE FIELD out ON doc_reference TYPE record<symbol>;
+DEFINE FIELD symbol_name ON doc_reference TYPE option<string>;
 DEFINE FIELD context ON doc_reference TYPE string;
 DEFINE FIELD created_at ON doc_reference TYPE datetime DEFAULT time::now();
 

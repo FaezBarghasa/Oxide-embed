@@ -17,3 +17,10 @@ tracing.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 zip.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "db_bench"
+harness = false

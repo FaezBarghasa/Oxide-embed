@@ -24,3 +24,10 @@ sha2.workspace = true
 [features]
 cuda = ["candle-core/cuda"]
 metal = ["candle-core/metal"]
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "embedder_bench"
+harness = false

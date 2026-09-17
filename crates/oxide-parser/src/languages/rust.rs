@@ -36,7 +36,14 @@ fn traverse_node(
     let mut current_scope = parent_scope.map(|s| s.to_string());
 
     let (symbol_kind, name_node) = match kind_str {
-        "function_item" => (Some(SymbolKind::Function), node.child_by_field_name("name")),
+        "function_item" => {
+            let kind = if parent_scope.is_some() {
+                SymbolKind::Method
+            } else {
+                SymbolKind::Function
+            };
+            (Some(kind), node.child_by_field_name("name"))
+        }
         "struct_item" => (Some(SymbolKind::Struct), node.child_by_field_name("name")),
         "enum_item" => (Some(SymbolKind::Enum), node.child_by_field_name("name")),
         "trait_item" => (Some(SymbolKind::Trait), node.child_by_field_name("name")),

@@ -29,3 +29,10 @@ tracing.workspace = true
 chrono.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "parser_bench"
+harness = false

@@ -49,13 +49,14 @@ impl GraphTraversalService {
     ) -> Result<Option<SubgraphContext>> {
         let sql = r#"
             SELECT 
+                id,
                 name,
                 kind,
                 signature,
                 file_id,
                 (SELECT VALUE relative_path FROM file WHERE id = type::record('file', $parent.file_id))[0] AS file_path
             FROM symbol
-            WHERE name = $name OR qualified_name = $name
+            WHERE name = $name OR qualified_name = $name OR id = type::record('symbol', $name)
             LIMIT 1;
         "#;
 
@@ -68,6 +69,8 @@ impl GraphTraversalService {
 
         #[derive(Deserialize)]
         struct SymRow {
+            #[serde(default)]
+            id: serde_json::Value,
             name: String,
             kind: String,
             signature: Option<String>,
@@ -84,14 +87,33 @@ impl GraphTraversalService {
             .and_then(|v| serde_json::from_value(v).ok());
 
         if let Some(sym) = row {
+            let sym_id_str = match &sym.id {
+                serde_json::Value::String(s) => s.strip_prefix("symbol:").unwrap_or(s).to_string(),
+                serde_json::Value::Object(obj) => {
+                    if let Some(serde_json::Value::String(s)) = obj.get("id") {
+                        s.clone()
+                    } else if let Some(serde_json::Value::Object(inner)) = obj.get("id") {
+                        if let Some(serde_json::Value::String(s)) = inner.get("String") {
+                            s.clone()
+                        } else {
+                            sym.name.clone()
+                        }
+                    } else {
+                        sym.name.clone()
+                    }
+                }
+                _ => sym.name.clone(),
+            };
+
             // Fetch callers and callees from calls table
             let call_sql = r#"
-                SELECT callee_name FROM calls WHERE caller_name = $name;
+                SELECT callee_name FROM calls WHERE caller_name = $name OR caller_name = $sym_id OR in = type::record('symbol', $sym_id);
             "#;
             let mut callee_res = store
                 .db()
                 .query(call_sql)
                 .bind(("name", symbol_name.to_string()))
+                .bind(("sym_id", sym_id_str.clone()))
                 .await
                 .map_err(|e| OxideError::Database(e.to_string()))?;
 
@@ -107,12 +129,13 @@ impl GraphTraversalService {
                 .collect();
 
             let caller_sql = r#"
-                SELECT caller_name FROM calls WHERE callee_name = $name;
+                SELECT caller_name FROM calls WHERE callee_name = $name OR callee_name = $sym_id OR out = type::record('symbol', $sym_id);
             "#;
             let mut caller_res = store
                 .db()
                 .query(caller_sql)
                 .bind(("name", symbol_name.to_string()))
+                .bind(("sym_id", sym_id_str.clone()))
                 .await
                 .map_err(|e| OxideError::Database(e.to_string()))?;
 
@@ -129,12 +152,13 @@ impl GraphTraversalService {
 
             // Fetch doc references
             let doc_sql = r#"
-                SELECT context FROM doc_reference WHERE symbol_name = $name;
+                SELECT context FROM doc_reference WHERE symbol_name = $name OR symbol_name = $sym_id OR out = type::record('symbol', $sym_id);
             "#;
             let mut doc_res = store
                 .db()
                 .query(doc_sql)
                 .bind(("name", symbol_name.to_string()))
+                .bind(("sym_id", sym_id_str))
                 .await
                 .map_err(|e| OxideError::Database(e.to_string()))?;
 
