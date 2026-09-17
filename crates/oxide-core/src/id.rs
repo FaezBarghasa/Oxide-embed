@@ -99,6 +99,25 @@ impl fmt::Display for ChunkId {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MemoryId(pub String);
+
+impl MemoryId {
+    pub fn new_v7() -> Self {
+        Self(format!("mem_{}", Uuid::now_v7()))
+    }
+
+    pub fn from_string(s: impl Into<String>) -> Self {
+        Self(s.into())
+    }
+}
+
+impl fmt::Display for MemoryId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub fn normalize_relative_path(path: &Path) -> String {
     path.components()
         .map(|c| c.as_os_str().to_string_lossy())
