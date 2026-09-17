@@ -1,10 +1,11 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oxide_core::condenser::TerminalCondenser;
 use oxide_core::id::{FileId, ProjectId, bytes_to_hex};
 use oxide_core::ledger::{TokenLedger, TokenUsageRecord};
 use oxide_core::memify::MemifyEngine;
 use oxide_core::read_guard::SessionReadGuard;
 use sha2::{Digest, Sha256};
+use std::hint::black_box;
 
 fn bench_id_and_hashing(c: &mut Criterion) {
     let mut group = c.benchmark_group("core_id_and_hashing");

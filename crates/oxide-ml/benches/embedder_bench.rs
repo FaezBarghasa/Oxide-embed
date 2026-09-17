@@ -1,6 +1,7 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oxide_ml::Embedder;
 use oxide_ml::candle_embedder::{CandleBertEmbedder, cluster_embeddings, cosine_similarity};
+use std::hint::black_box;
 
 fn bench_candle_embedder(c: &mut Criterion) {
     let mut group = c.benchmark_group("ml_candle_embedder");

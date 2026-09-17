@@ -1,9 +1,10 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oxide_core::FileRecord;
 use oxide_core::id::{FileId, ProjectId, SymbolId};
 use oxide_core::symbol::{CallEdge, SymbolKind, SymbolRecord};
 use oxide_db::traversal::GraphTraversalService;
 use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
+use std::hint::black_box;
 
 fn bench_database_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("db_surreal_operations");

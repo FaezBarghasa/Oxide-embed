@@ -1,10 +1,11 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oxide_core::id::FileId;
 use oxide_parser::Language;
 use oxide_parser::chunker::Chunker;
 use oxide_parser::doc_linker::DocLinker;
 use oxide_parser::languages::get_extractor;
 use oxide_parser::outline::OutlineGenerator;
+use std::hint::black_box;
 
 const RUST_SAMPLE: &str = r#"
 pub struct EmbeddedDriver {

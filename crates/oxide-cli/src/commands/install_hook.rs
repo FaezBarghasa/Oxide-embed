@@ -13,7 +13,7 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
 
     if tool == "all" || tool == "antigravity" || tool == "gemini" {
         let agy_mcp_dir = Path::new(&home).join(".gemini/antigravity-ide/mcp/oxide-embed");
-        if let Ok(_) = fs::create_dir_all(&agy_mcp_dir) {
+        if fs::create_dir_all(&agy_mcp_dir).is_ok() {
             let config_json = serde_json::json!({
                 "mcpServers": {
                     "oxide-embed": {
@@ -51,17 +51,17 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
             "     claude mcp add oxide-embed -- {} mcp-serve",
             binary_path
         );
-        if !claude_cfg.exists() {
-            if let Ok(content) = serde_json::to_string_pretty(&claude_entry) {
-                let _ = fs::write(&claude_cfg, content);
-                println!("     Created {}", claude_cfg.display());
-            }
+        if !claude_cfg.exists()
+            && let Ok(content) = serde_json::to_string_pretty(&claude_entry)
+        {
+            let _ = fs::write(&claude_cfg, content);
+            println!("     Created {}", claude_cfg.display());
         }
     }
 
     if tool == "all" || tool == "cursor" {
         let cursor_dir = project_root.join(".cursor");
-        if let Ok(_) = fs::create_dir_all(&cursor_dir) {
+        if fs::create_dir_all(&cursor_dir).is_ok() {
             let cursor_mcp = cursor_dir.join("mcp.json");
             let cursor_json = serde_json::json!({
                 "mcpServers": {

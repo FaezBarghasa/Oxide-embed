@@ -249,27 +249,26 @@ fn traverse_imports(node: Node, content: &str, file_id: &FileId, imports: &mut V
             .trim_end_matches(';')
             .trim();
 
-            let mut imported_symbols = Vec::new();
-            if let Some(last_part) = cleaned.split("::").last() {
-                if last_part.starts_with('{') && last_part.ends_with('}') {
-                    let inner = &last_part[1..last_part.len() - 1];
-                    for s in inner.split(',') {
-                        let sym = s.trim();
-                        if !sym.is_empty() {
-                            imported_symbols.push(sym.to_string());
-                        }
+        let mut imported_symbols = Vec::new();
+        if let Some(last_part) = cleaned.rsplit("::").next() {
+            if last_part.starts_with('{') && last_part.ends_with('}') {
+                let inner = &last_part[1..last_part.len() - 1];
+                for s in inner.split(',') {
+                    let sym = s.trim();
+                    if !sym.is_empty() {
+                        imported_symbols.push(sym.to_string());
                     }
-                } else {
-                    imported_symbols.push(last_part.to_string());
                 }
+            } else {
+                imported_symbols.push(last_part.to_string());
             }
-
-            imports.push(ImportEdge {
-                file_id: file_id.clone(),
-                imported_path: cleaned.to_string(),
-                imported_symbols,
-            });
         }
+
+        imports.push(ImportEdge {
+            file_id: file_id.clone(),
+            imported_path: cleaned.to_string(),
+            imported_symbols,
+        });
     }
 
     let mut cursor = node.walk();

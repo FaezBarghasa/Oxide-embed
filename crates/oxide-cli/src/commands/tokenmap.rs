@@ -29,24 +29,24 @@ pub async fn handle_tokenmap(project_root: &Path, max_depth: usize) -> Result<()
             continue;
         }
 
-        if path.is_file() {
-            if let Ok(content) = std::fs::read_to_string(path) {
-                let tokens = TokenEstimator::estimate_tokens(&content);
-                total_tokens += tokens;
+        if path.is_file()
+            && let Ok(content) = std::fs::read_to_string(path)
+        {
+            let tokens = TokenEstimator::estimate_tokens(&content);
+            total_tokens += tokens;
 
-                let rel = path.strip_prefix(project_root).unwrap_or(path);
-                let rel_str = rel.to_string_lossy().to_string();
-                file_tokens.push((rel_str.clone(), tokens));
+            let rel = path.strip_prefix(project_root).unwrap_or(path);
+            let rel_str = rel.to_string_lossy().to_string();
+            file_tokens.push((rel_str.clone(), tokens));
 
-                if let Some(parent) = rel.parent() {
-                    let parent_str = parent.to_string_lossy().to_string();
-                    let key = if parent_str.is_empty() {
-                        ".".to_string()
-                    } else {
-                        parent_str
-                    };
-                    *dir_tokens.entry(key).or_insert(0) += tokens;
-                }
+            if let Some(parent) = rel.parent() {
+                let parent_str = parent.to_string_lossy().to_string();
+                let key = if parent_str.is_empty() {
+                    ".".to_string()
+                } else {
+                    parent_str
+                };
+                *dir_tokens.entry(key).or_insert(0) += tokens;
             }
         }
     }
@@ -62,7 +62,7 @@ pub async fn handle_tokenmap(project_root: &Path, max_depth: usize) -> Result<()
     }
 
     println!("\n📄 Top 10 Largest Context Files:");
-    file_tokens.sort_by(|a, b| b.1.cmp(&a.1));
+    file_tokens.sort_by_key(|b| std::cmp::Reverse(b.1));
     for (file, tokens) in file_tokens.iter().take(10) {
         let pct = if total_tokens > 0 {
             (*tokens as f64 / total_tokens as f64) * 100.0
