@@ -367,15 +367,12 @@ impl McpServer {
                             "### {} (L{}-L{})\n```\n{}\n```\n",
                             h.file_path, h.start_line, h.end_line, h.text
                         );
-                        if with_graph {
-                            if let Some(ref sname) = h.symbol_name {
-                                if let Ok(Some(subgraph)) =
-                                    GraphTraversalService::get_subgraph(st, sname, 2).await
-                                {
-                                    item_text
-                                        .push_str(&format!("\n{}", subgraph.to_compact_string()));
-                                }
-                            }
+                        if with_graph
+                            && let Some(ref sname) = h.symbol_name
+                            && let Ok(Some(subgraph)) =
+                                GraphTraversalService::get_subgraph(st, sname, 2).await
+                        {
+                            item_text.push_str(&format!("\n{}", subgraph.to_compact_string()));
                         }
                         candidates.push(BudgetCandidate::new(
                             format!("{}:{}", h.file_path, h.start_line),

@@ -59,12 +59,12 @@ impl WorkspaceWatcher {
         loop {
             // Drain incoming events with short timeout
             while let Ok(event_res) = rx.recv_timeout(Duration::from_millis(200)) {
-                if let Ok(event) = event_res {
-                    if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
-                        for path in event.paths {
-                            if self.should_index(&path) {
-                                pending_files.insert(path);
-                            }
+                if let Ok(event) = event_res
+                    && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_))
+                {
+                    for path in event.paths {
+                        if self.should_index(&path) {
+                            pending_files.insert(path);
                         }
                     }
                 }

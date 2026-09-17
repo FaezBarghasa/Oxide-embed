@@ -78,12 +78,11 @@ pub async fn handle_context(
             );
 
             // Fetch 2-hop subgraph if symbol
-            if let Some(ref sym_name) = hit.symbol_name {
-                if let Ok(Some(subgraph)) =
+            if let Some(ref sym_name) = hit.symbol_name
+                && let Ok(Some(subgraph)) =
                     GraphTraversalService::get_subgraph(&store, sym_name, 2).await
-                {
-                    snippet.push_str(&format!("\n\n{}", subgraph.to_compact_string()));
-                }
+            {
+                snippet.push_str(&format!("\n\n{}", subgraph.to_compact_string()));
             }
 
             let title = hit.symbol_name.unwrap_or(hit.file_path);
