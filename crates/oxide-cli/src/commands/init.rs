@@ -1,7 +1,7 @@
-use std::fs;
-use std::path::Path;
 use oxide_core::error::Result;
 use oxide_core::{OxideConfig, OxideManifest};
+use std::fs;
+use std::path::Path;
 
 pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result<()> {
     let project_name = name_override.unwrap_or_else(|| {
@@ -34,10 +34,7 @@ pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result
     // Create .gitignore in .oxide
     let gitignore_path = oxide_dir.join(".gitignore");
     if !gitignore_path.exists() {
-        fs::write(
-            &gitignore_path,
-            "project.db/\ncache/\nlogs/\nruntime/\n",
-        )?;
+        fs::write(&gitignore_path, "project.db/\ncache/\nlogs/\nruntime/\n")?;
     }
 
     println!("Initialized oxide-embed project memory in .oxide/");

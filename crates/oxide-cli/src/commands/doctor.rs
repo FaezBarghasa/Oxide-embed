@@ -1,7 +1,7 @@
-use std::path::Path;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
+use std::path::Path;
 
 pub async fn handle_doctor(project_root: &Path) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
@@ -53,7 +53,10 @@ pub async fn handle_doctor(project_root: &Path) -> Result<()> {
     // 4. Embedding compatibility
     println!("  [OK] Embedding Configuration:");
     println!("       Model:          {}", manifest.embedding.model);
-    println!("       Vector Set ID:  {}", manifest.embedding.vector_set_id);
+    println!(
+        "       Vector Set ID:  {}",
+        manifest.embedding.vector_set_id
+    );
     println!("       Dimension:      {}", manifest.embedding.dimension);
 
     println!("\nStatus: Ready");

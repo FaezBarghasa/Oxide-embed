@@ -1,8 +1,8 @@
-use std::path::Path;
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use oxide_core::error::Result;
 use oxide_core::{ChunkRecord, FileRecord, SymbolRecord};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchQuery {
@@ -32,6 +32,10 @@ pub trait ProjectStore: Send + Sync {
     async fn upsert_file(&self, file: &FileRecord) -> Result<()>;
     async fn upsert_symbol(&self, symbol: &SymbolRecord) -> Result<()>;
     async fn upsert_chunk(&self, chunk: &ChunkRecord) -> Result<()>;
+    async fn upsert_doc_section(&self, section: &oxide_core::DocSection) -> Result<()>;
+    async fn upsert_doc_reference(&self, edge: &oxide_core::DocReferenceEdge) -> Result<()>;
+    async fn upsert_call_edge(&self, edge: &oxide_core::CallEdge) -> Result<()>;
+    async fn upsert_import_edge(&self, edge: &oxide_core::ImportEdge) -> Result<()>;
 
     async fn get_file_symbols(&self, file_path: &str) -> Result<Vec<SymbolRecord>>;
     async fn get_file_outline(&self, file_path: &str) -> Result<Option<String>>;

@@ -1,23 +1,31 @@
-use std::path::Path;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use surrealdb::engine::local::{Db, SurrealKv};
-use surrealdb::Surreal;
-use oxide_core::error::{OxideError, Result};
-use oxide_core::{ChunkRecord, FileRecord, SymbolRecord};
 use crate::schema::INITIAL_SCHEMA_SURQL;
 use crate::store::{ProjectStore, SearchHit, SearchQuery};
+use async_trait::async_trait;
+use oxide_core::error::{OxideError, Result};
+use oxide_core::{ChunkRecord, FileRecord, SymbolRecord};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+use surrealdb::Surreal;
+use surrealdb::engine::local::{Db, SurrealKv};
 
 #[derive(Clone)]
 pub struct SurrealProjectStore {
     db: Surreal<Db>,
 }
 
+impl SurrealProjectStore {
+    pub fn db(&self) -> &Surreal<Db> {
+        &self.db
+    }
+}
+
 fn take_vec<T: for<'de> Deserialize<'de>>(
     res: &mut surrealdb::IndexedResults,
     idx: usize,
 ) -> Result<Vec<T>> {
-    let rows: Vec<serde_json::Value> = res.take(idx).map_err(|e| OxideError::Database(e.to_string()))?;
+    let rows: Vec<serde_json::Value> = res
+        .take(idx)
+        .map_err(|e| OxideError::Database(e.to_string()))?;
     rows.into_iter()
         .map(|v| serde_json::from_value(v).map_err(|e| OxideError::Database(e.to_string())))
         .collect()
@@ -67,7 +75,7 @@ impl ProjectStore for SurrealProjectStore {
     async fn upsert_file(&self, file: &FileRecord) -> Result<()> {
         let id_str = file.id.0.clone();
         let sql = r#"
-            UPSERT type::thing('file', $id) SET
+            UPSERT type::record('file', $id) SET
                 project_id = $project_id,
                 relative_path = $relative_path,
                 language = $language,
@@ -93,7 +101,7 @@ impl ProjectStore for SurrealProjectStore {
     async fn upsert_symbol(&self, symbol: &SymbolRecord) -> Result<()> {
         let id_str = symbol.id.0.clone();
         let sql = r#"
-            UPSERT type::thing('symbol', $id) SET
+            UPSERT type::record('symbol', $id) SET
                 file_id = $file_id,
                 kind = $kind,
                 name = $name,
@@ -126,7 +134,7 @@ impl ProjectStore for SurrealProjectStore {
     async fn upsert_chunk(&self, chunk: &ChunkRecord) -> Result<()> {
         let id_str = chunk.id.0.clone();
         let sql = r#"
-            UPSERT type::thing('chunk', $id) SET
+            UPSERT type::record('chunk', $id) SET
                 file_id = $file_id,
                 symbol_id = $symbol_id,
                 kind = $kind,
@@ -163,6 +171,91 @@ impl ProjectStore for SurrealProjectStore {
         Ok(())
     }
 
+    async fn upsert_doc_section(&self, section: &oxide_core::DocSection) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('doc_section', $id) SET
+                file_path = $file_path,
+                heading = $heading,
+                content = $content,
+                embedding = $embedding;
+        "#;
+        self.db
+            .query(sql)
+            .bind(("id", section.id.clone()))
+            .bind(("file_path", section.file_path.clone()))
+            .bind(("heading", section.heading.clone()))
+            .bind(("content", section.content.clone()))
+            .bind(("embedding", section.embedding.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn upsert_doc_reference(&self, edge: &oxide_core::DocReferenceEdge) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('doc_reference', $id) SET
+                in = type::record('doc_section', $doc_id),
+                out = type::record('symbol', $sym_id),
+                symbol_name = $sym_name,
+                context = $context,
+                created_at = time::now();
+        "#;
+        let edge_id = format!("{}:{}", edge.doc_section_id, edge.symbol_id.0);
+        self.db
+            .query(sql)
+            .bind(("id", edge_id))
+            .bind(("doc_id", edge.doc_section_id.clone()))
+            .bind(("sym_id", edge.symbol_id.0.clone()))
+            .bind(("sym_name", edge.symbol_id.0.clone()))
+            .bind(("context", edge.context.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn upsert_call_edge(&self, edge: &oxide_core::CallEdge) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('calls', $id) SET
+                in = type::record('symbol', $caller_id),
+                out = type::record('symbol', $callee_name),
+                caller_name = $caller_id,
+                callee_name = $callee_name,
+                line = $line,
+                weight = 1.0,
+                valid_from = time::now();
+        "#;
+        let edge_id = format!("{}:{}", edge.caller_symbol_id.0, edge.callee_name);
+        self.db
+            .query(sql)
+            .bind(("id", edge_id))
+            .bind(("caller_id", edge.caller_symbol_id.0.clone()))
+            .bind(("callee_name", edge.callee_name.clone()))
+            .bind(("line", edge.line as i64))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn upsert_import_edge(&self, edge: &oxide_core::ImportEdge) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('imports', $id) SET
+                in = type::record('file', $file_id),
+                imported_path = $imported_path,
+                imported_symbols = $imported_symbols,
+                weight = 1.0;
+        "#;
+        let edge_id = format!("{}:{}", edge.file_id.0, edge.imported_path);
+        self.db
+            .query(sql)
+            .bind(("id", edge_id))
+            .bind(("file_id", edge.file_id.0.clone()))
+            .bind(("imported_path", edge.imported_path.clone()))
+            .bind(("imported_symbols", edge.imported_symbols.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
     async fn get_file_symbols(&self, file_path: &str) -> Result<Vec<SymbolRecord>> {
         let fid = oxide_core::id::FileId::from_relative_path(file_path).0;
         let sql = "SELECT * FROM symbol WHERE file_id = $fid ORDER BY start_line ASC;";
@@ -178,7 +271,8 @@ impl ProjectStore for SurrealProjectStore {
 
     async fn get_file_outline(&self, file_path: &str) -> Result<Option<String>> {
         let fid = oxide_core::id::FileId::from_relative_path(file_path).0;
-        let sql = "SELECT outline FROM chunk WHERE file_id = $fid AND kind = 'file_outline' LIMIT 1;";
+        let sql =
+            "SELECT outline FROM chunk WHERE file_id = $fid AND kind = 'file_outline' LIMIT 1;";
         let mut out_res = self
             .db
             .query(sql)
@@ -193,8 +287,8 @@ impl ProjectStore for SurrealProjectStore {
     async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>> {
         let sql = r#"
             SELECT 
-                (SELECT VALUE relative_path FROM file WHERE id = type::thing('file', chunk.file_id))[0] AS file_path,
-                (SELECT VALUE name FROM symbol WHERE id = type::thing('symbol', chunk.symbol_id))[0] AS symbol_name,
+                (SELECT VALUE relative_path FROM file WHERE id = type::record('file', chunk.file_id))[0] AS file_path,
+                (SELECT VALUE name FROM symbol WHERE id = type::record('symbol', chunk.symbol_id))[0] AS symbol_name,
                 start_line,
                 end_line,
                 outline,
@@ -218,8 +312,16 @@ impl ProjectStore for SurrealProjectStore {
             .filter_map(|c| {
                 let file_path = c.file_path.unwrap_or_else(|| "unknown".to_string());
                 let text_lower = c.text.to_lowercase();
-                let sym_lower = c.symbol_name.as_ref().map(|s| s.to_lowercase()).unwrap_or_default();
-                let outline_lower = c.outline.as_ref().map(|s| s.to_lowercase()).unwrap_or_default();
+                let sym_lower = c
+                    .symbol_name
+                    .as_ref()
+                    .map(|s| s.to_lowercase())
+                    .unwrap_or_default();
+                let outline_lower = c
+                    .outline
+                    .as_ref()
+                    .map(|s| s.to_lowercase())
+                    .unwrap_or_default();
 
                 let mut score = 0.0f32;
 
@@ -254,7 +356,11 @@ impl ProjectStore for SurrealProjectStore {
             })
             .collect();
 
-        hits.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        hits.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         hits.truncate(query.limit);
         Ok(hits)
     }
@@ -290,14 +396,32 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn export_surql(&self) -> Result<String> {
-        let mut f_res = self.db.query("SELECT * FROM file;").await.map_err(|e| OxideError::Database(e.to_string()))?;
-        let files: Vec<serde_json::Value> = f_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+        let mut f_res = self
+            .db
+            .query("SELECT * FROM file;")
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let files: Vec<serde_json::Value> = f_res
+            .take(0)
+            .map_err(|e| OxideError::Database(e.to_string()))?;
 
-        let mut s_res = self.db.query("SELECT * FROM symbol;").await.map_err(|e| OxideError::Database(e.to_string()))?;
-        let symbols: Vec<serde_json::Value> = s_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+        let mut s_res = self
+            .db
+            .query("SELECT * FROM symbol;")
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let symbols: Vec<serde_json::Value> = s_res
+            .take(0)
+            .map_err(|e| OxideError::Database(e.to_string()))?;
 
-        let mut c_res = self.db.query("SELECT * FROM chunk;").await.map_err(|e| OxideError::Database(e.to_string()))?;
-        let chunks: Vec<serde_json::Value> = c_res.take(0).map_err(|e| OxideError::Database(e.to_string()))?;
+        let mut c_res = self
+            .db
+            .query("SELECT * FROM chunk;")
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let chunks: Vec<serde_json::Value> = c_res
+            .take(0)
+            .map_err(|e| OxideError::Database(e.to_string()))?;
 
         let dump = serde_json::json!({
             "files": files,
@@ -309,22 +433,34 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn import_surql(&self, content: &str) -> Result<()> {
-        let val: serde_json::Value = serde_json::from_str(content)
-            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let val: serde_json::Value =
+            serde_json::from_str(content).map_err(|e| OxideError::Database(e.to_string()))?;
 
         if let Some(files) = val.get("files").and_then(|v| v.as_array()) {
             for f in files {
-                let _ = self.db.query("INSERT INTO file $data;").bind(("data", f.clone())).await;
+                let _ = self
+                    .db
+                    .query("INSERT INTO file $data;")
+                    .bind(("data", f.clone()))
+                    .await;
             }
         }
         if let Some(symbols) = val.get("symbols").and_then(|v| v.as_array()) {
             for s in symbols {
-                let _ = self.db.query("INSERT INTO symbol $data;").bind(("data", s.clone())).await;
+                let _ = self
+                    .db
+                    .query("INSERT INTO symbol $data;")
+                    .bind(("data", s.clone()))
+                    .await;
             }
         }
         if let Some(chunks) = val.get("chunks").and_then(|v| v.as_array()) {
             for c in chunks {
-                let _ = self.db.query("INSERT INTO chunk $data;").bind(("data", c.clone())).await;
+                let _ = self
+                    .db
+                    .query("INSERT INTO chunk $data;")
+                    .bind(("data", c.clone()))
+                    .await;
             }
         }
         Ok(())

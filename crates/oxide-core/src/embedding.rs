@@ -1,6 +1,6 @@
+use crate::id::bytes_to_hex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use crate::id::bytes_to_hex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PoolingMethod {
@@ -29,13 +29,8 @@ impl EmbeddingMetadata {
         let pooling = PoolingMethod::LastToken;
         let normalized = true;
 
-        let vector_set_id = Self::compute_vector_set_id(
-            &model,
-            &quantization,
-            dimension,
-            &pooling,
-            normalized,
-        );
+        let vector_set_id =
+            Self::compute_vector_set_id(&model, &quantization, dimension, &pooling, normalized);
 
         Self {
             model,

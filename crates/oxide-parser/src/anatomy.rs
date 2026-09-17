@@ -1,12 +1,12 @@
+use crate::language::Language;
+use crate::languages::get_extractor;
+use oxide_core::error::Result;
+use oxide_core::id::FileId;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use oxide_core::error::Result;
-use oxide_core::id::FileId;
-use crate::language::Language;
-use crate::languages::get_extractor;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnatomySymbolEntry {
@@ -139,7 +139,8 @@ impl AnatomyScanner {
             .and_then(|s| s.to_str())
             .unwrap_or("project");
 
-        let mut index = existing_index.unwrap_or_else(|| AnatomyIndex::new(project_name, root_path));
+        let mut index =
+            existing_index.unwrap_or_else(|| AnatomyIndex::new(project_name, root_path));
 
         let walker = ignore::WalkBuilder::new(root_path)
             .hidden(false)
@@ -186,10 +187,10 @@ impl AnatomyScanner {
             }
 
             // Check if unchanged in existing index
-            if let Some(existing) = index.files.get(&rel_path) {
-                if existing.content_hash == hash {
-                    continue;
-                }
+            if let Some(existing) = index.files.get(&rel_path)
+                && existing.content_hash == hash
+            {
+                continue;
             }
 
             let line_count = content.lines().count();

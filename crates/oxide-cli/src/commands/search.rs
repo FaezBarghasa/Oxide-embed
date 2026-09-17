@@ -1,10 +1,16 @@
-use std::path::Path;
-use oxide_core::error::{OxideError, Result};
 use oxide_core::OxideManifest;
-use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
-use oxide_ml::{Embedder, MockEmbedder};
+use oxide_core::error::{OxideError, Result};
+use oxide_db::{GraphTraversalService, ProjectStore, SearchQuery, SurrealProjectStore};
+use oxide_ml::{CandleBertEmbedder, Embedder};
+use std::path::Path;
 
-pub async fn handle_search(project_root: &Path, query_str: &str, limit: usize) -> Result<()> {
+pub async fn handle_search(
+    project_root: &Path,
+    query_str: &str,
+    limit: usize,
+    with_graph: bool,
+    hops: usize,
+) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
         return Err(OxideError::NotInitialized(project_root.to_path_buf()));
@@ -14,7 +20,7 @@ pub async fn handle_search(project_root: &Path, query_str: &str, limit: usize) -
     let db_path = oxide_dir.join(&manifest.storage.path);
     let store = SurrealProjectStore::open(&db_path).await?;
 
-    let embedder = MockEmbedder::new(manifest.embedding.dimension);
+    let embedder = CandleBertEmbedder::new_offline();
     let query_embedding = embedder.embed(query_str).await.ok();
 
     let query = SearchQuery {
@@ -45,6 +51,18 @@ pub async fn handle_search(project_root: &Path, query_str: &str, limit: usize) -
         );
         if let Some(out) = &hit.outline_or_signature {
             println!("   {}", out);
+        }
+
+        if with_graph
+            && let Some(symbol_name) = &hit.symbol_name
+            && let Ok(Some(subgraph)) =
+                GraphTraversalService::get_subgraph(&store, symbol_name, hops).await
+        {
+            println!(
+                "\n   [Knowledge Subgraph ({} hops)]:\n   {}",
+                hops,
+                subgraph.to_compact_string().replace('\n', "\n   ")
+            );
         }
         println!();
     }

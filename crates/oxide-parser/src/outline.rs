@@ -25,9 +25,15 @@ impl OutlineGenerator {
 
             let name = sym.qualified_name.as_deref().unwrap_or(&sym.name);
             if let Some(sig) = &sym.signature {
-                lines.push(format!("{}: L{}-L{} | {}", prefix, sym.start_line, sym.end_line, sig));
+                lines.push(format!(
+                    "{}: L{}-L{} | {}",
+                    prefix, sym.start_line, sym.end_line, sig
+                ));
             } else {
-                lines.push(format!("{}: L{}-L{} | {}", prefix, sym.start_line, sym.end_line, name));
+                lines.push(format!(
+                    "{}: L{}-L{} | {}",
+                    prefix, sym.start_line, sym.end_line, name
+                ));
             }
         }
         lines.join("\n")

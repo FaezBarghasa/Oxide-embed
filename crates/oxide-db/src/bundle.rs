@@ -1,11 +1,11 @@
+use crate::store::ProjectStore;
+use oxide_core::OxideManifest;
+use oxide_core::error::{OxideError, Result};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
-use oxide_core::error::{OxideError, Result};
-use oxide_core::OxideManifest;
-use crate::store::ProjectStore;
 
 pub struct OxemBundle;
 
@@ -17,8 +17,8 @@ impl OxemBundle {
     ) -> Result<()> {
         let file = File::create(output_path)?;
         let mut zip = ZipWriter::new(file);
-        let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Deflated);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
         // 1. Write manifest.json
         zip.start_file("manifest.json", options)

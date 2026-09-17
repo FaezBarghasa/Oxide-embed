@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::id::{FileId, SymbolId};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SymbolKind {

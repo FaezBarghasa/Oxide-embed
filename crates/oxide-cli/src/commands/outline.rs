@@ -1,25 +1,25 @@
-use std::fs;
-use std::path::Path;
+use oxide_core::OxideManifest;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::id::FileId;
-use oxide_core::OxideManifest;
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_parser::languages::get_extractor;
 use oxide_parser::{Language, OutlineGenerator};
+use std::fs;
+use std::path::Path;
 
 pub async fn handle_outline(project_root: &Path, rel_path: &str) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
 
     // If .oxide exists and indexed, try fast path from DB first
-    if oxide_dir.exists() {
-        if let Ok(manifest) = OxideManifest::load_from_dir(&oxide_dir) {
-            let db_path = oxide_dir.join(&manifest.storage.path);
-            if let Ok(store) = SurrealProjectStore::open(&db_path).await {
-                if let Ok(Some(outline)) = store.get_file_outline(rel_path).await {
-                    println!("{}", outline);
-                    return Ok(());
-                }
-            }
+    if oxide_dir.exists()
+        && let Ok(manifest) = OxideManifest::load_from_dir(&oxide_dir)
+    {
+        let db_path = oxide_dir.join(&manifest.storage.path);
+        if let Ok(store) = SurrealProjectStore::open(&db_path).await
+            && let Ok(Some(outline)) = store.get_file_outline(rel_path).await
+        {
+            println!("{}", outline);
+            return Ok(());
         }
     }
 

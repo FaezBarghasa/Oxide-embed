@@ -58,7 +58,7 @@ DEFINE FIELD traversal_count ON calls TYPE int DEFAULT 0;
 DEFINE FIELD last_traversed_at ON calls TYPE option<datetime>;
 DEFINE FIELD valid_from ON calls TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_to ON calls TYPE option<datetime>;
-DEFINE INDEX idx_calls_active ON calls FIELDS valid_to WHERE valid_to IS NONE;
+DEFINE INDEX idx_calls_active ON calls FIELDS valid_to;
 
 DEFINE TABLE contains SCHEMAFULL TYPE RELATION;
 DEFINE FIELD in ON contains TYPE record<file>;
@@ -97,7 +97,7 @@ DEFINE FIELD status ON buglog TYPE string DEFAULT "active";
 DEFINE FIELD cluster_id ON buglog TYPE option<string>;
 DEFINE FIELD consolidated_into ON buglog TYPE option<record<cerebrum_rule>>;
 DEFINE FIELD created_at ON buglog TYPE datetime DEFAULT time::now();
-DEFINE INDEX idx_buglog_active ON buglog FIELDS status WHERE status = "active";
+DEFINE INDEX idx_buglog_active ON buglog FIELDS status;
 
 DEFINE TABLE memory_evolution_log SCHEMAFULL;
 DEFINE FIELD action ON memory_evolution_log TYPE string;

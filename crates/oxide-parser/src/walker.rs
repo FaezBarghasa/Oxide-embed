@@ -1,11 +1,11 @@
+use crate::language::Language;
+use ignore::WalkBuilder;
+use oxide_core::FileRecord;
+use oxide_core::error::Result;
+use oxide_core::id::{FileId, ProjectId, bytes_to_hex, normalize_relative_path};
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
-use ignore::WalkBuilder;
-use sha2::{Digest, Sha256};
-use oxide_core::error::Result;
-use oxide_core::id::{bytes_to_hex, normalize_relative_path, FileId, ProjectId};
-use oxide_core::FileRecord;
-use crate::language::Language;
 
 #[derive(Debug)]
 pub struct ProjectWalker {
@@ -62,9 +62,10 @@ impl ProjectWalker {
                     continue;
                 }
 
-                let should_ignore = self.custom_ignores.iter().any(|ign| {
-                    rel_str.starts_with(ign.trim_end_matches('/'))
-                });
+                let should_ignore = self
+                    .custom_ignores
+                    .iter()
+                    .any(|ign| rel_str.starts_with(ign.trim_end_matches('/')));
                 if should_ignore {
                     continue;
                 }

@@ -1,7 +1,7 @@
+use super::LanguageExtractor;
+use crate::language::Language;
 use oxide_core::id::{FileId, SymbolId};
 use oxide_core::{SymbolKind, SymbolRecord};
-use crate::language::Language;
-use super::LanguageExtractor;
 
 pub struct GenericConfigExtractor {
     pub language: Language,
@@ -14,11 +14,7 @@ impl GenericConfigExtractor {
 }
 
 impl LanguageExtractor for GenericConfigExtractor {
-    fn extract_symbols(
-        &self,
-        file_id: &FileId,
-        content: &str,
-    ) -> Vec<SymbolRecord> {
+    fn extract_symbols(&self, file_id: &FileId, content: &str) -> Vec<SymbolRecord> {
         let mut symbols = Vec::new();
         let lines: Vec<&str> = content.lines().collect();
 
@@ -32,7 +28,11 @@ impl LanguageExtractor for GenericConfigExtractor {
             if self.language == Language::Slint {
                 if trimmed.starts_with("export component ") || trimmed.starts_with("component ") {
                     let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                    let name = parts.iter().skip_while(|&&p| p != "component").nth(1).unwrap_or(&"Component");
+                    let name = parts
+                        .iter()
+                        .skip_while(|&&p| p != "component")
+                        .nth(1)
+                        .unwrap_or(&"Component");
                     let name_clean = name.trim_end_matches('{').trim_end_matches(':').trim();
                     let line_no = idx + 1;
 
@@ -50,7 +50,11 @@ impl LanguageExtractor for GenericConfigExtractor {
                     });
                 } else if trimmed.starts_with("export struct ") || trimmed.starts_with("struct ") {
                     let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                    let name = parts.iter().skip_while(|&&p| p != "struct").nth(1).unwrap_or(&"Struct");
+                    let name = parts
+                        .iter()
+                        .skip_while(|&&p| p != "struct")
+                        .nth(1)
+                        .unwrap_or(&"Struct");
                     let name_clean = name.trim_end_matches('{').trim_end_matches(':').trim();
                     let line_no = idx + 1;
 
@@ -110,7 +114,9 @@ impl LanguageExtractor for GenericConfigExtractor {
             }
 
             // Gradle tasks
-            if self.language == Language::Gradle && (trimmed.starts_with("task ") || trimmed.starts_with("tasks.register")) {
+            if self.language == Language::Gradle
+                && (trimmed.starts_with("task ") || trimmed.starts_with("tasks.register"))
+            {
                 let line_no = idx + 1;
                 symbols.push(SymbolRecord {
                     id: SymbolId::new(file_id, &format!("task_{}", line_no)),
@@ -127,7 +133,9 @@ impl LanguageExtractor for GenericConfigExtractor {
             }
 
             // YAML / TOML / CFG / INI Top-Level Sections
-            if (self.language == Language::Toml || self.language == Language::Cfg || self.language == Language::Qemu)
+            if (self.language == Language::Toml
+                || self.language == Language::Cfg
+                || self.language == Language::Qemu)
                 && trimmed.starts_with('[')
                 && trimmed.ends_with(']')
             {

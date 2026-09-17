@@ -1,6 +1,6 @@
+use crate::id::{ChunkId, FileId, SymbolId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::id::{ChunkId, FileId, SymbolId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChunkKind {

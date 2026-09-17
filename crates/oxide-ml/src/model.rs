@@ -1,7 +1,7 @@
-use std::fs;
-use std::path::PathBuf;
 use directories::ProjectDirs;
 use oxide_core::error::{OxideError, Result};
+use std::fs;
+use std::path::PathBuf;
 
 pub struct ModelManager;
 

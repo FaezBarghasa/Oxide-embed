@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use sha2::{Digest, Sha256};
-use oxide_core::error::Result;
 use crate::embedder::Embedder;
+use async_trait::async_trait;
+use oxide_core::error::Result;
+use sha2::{Digest, Sha256};
 
 pub struct MockEmbedder {
     dimension: usize,

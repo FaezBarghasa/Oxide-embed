@@ -1,7 +1,7 @@
-use std::fmt::{self, Write};
-use std::path::Path;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fmt::{self, Write};
+use std::path::Path;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

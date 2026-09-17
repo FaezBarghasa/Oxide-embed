@@ -1,6 +1,6 @@
+use crate::id::{FileId, ProjectId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::id::{FileId, ProjectId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FileRecord {

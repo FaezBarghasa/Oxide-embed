@@ -1,13 +1,13 @@
-use std::path::Path;
+use crate::device::select_device;
+use crate::embedder::Embedder;
+use crate::mock::MockEmbedder;
 use async_trait::async_trait;
 use candle_core::{Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config};
-use tokenizers::Tokenizer;
 use oxide_core::error::{OxideError, Result};
-use crate::device::select_device;
-use crate::embedder::Embedder;
-use crate::mock::MockEmbedder;
+use std::path::Path;
+use tokenizers::Tokenizer;
 
 pub struct CandleBertEmbedder {
     model: Option<BertModel>,
@@ -43,8 +43,12 @@ impl CandleBertEmbedder {
             .map_err(|e| OxideError::Ml(format!("Failed to load tokenizer: {e}")))?;
 
         let vb = unsafe {
-            VarBuilder::from_mmaped_safetensors(&[weights_path.as_ref()], candle_core::DType::F32, &device)
-                .map_err(|e| OxideError::Ml(format!("Failed to load safetensors: {e}")))?
+            VarBuilder::from_mmaped_safetensors(
+                &[weights_path.as_ref()],
+                candle_core::DType::F32,
+                &device,
+            )
+            .map_err(|e| OxideError::Ml(format!("Failed to load safetensors: {e}")))?
         };
 
         let model = BertModel::load(vb, &config)
@@ -86,7 +90,10 @@ impl Embedder for CandleBertEmbedder {
             let (_b, seq_len, _h) = embeddings
                 .dims3()
                 .map_err(|e| OxideError::Ml(e.to_string()))?;
-            let mean = (embeddings.sum(1).map_err(|e| OxideError::Ml(e.to_string()))? / (seq_len as f64))
+            let mean = (embeddings
+                .sum(1)
+                .map_err(|e| OxideError::Ml(e.to_string()))?
+                / (seq_len as f64))
                 .map_err(|e| OxideError::Ml(e.to_string()))?;
             let vec: Vec<f32> = mean
                 .squeeze(0)

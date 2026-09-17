@@ -1,13 +1,27 @@
+pub mod consolidate;
 pub mod doctor;
+pub mod explain;
 pub mod export_import;
+pub mod handoff;
 pub mod index;
 pub mod init;
+pub mod memify;
 pub mod outline;
+pub mod read;
+pub mod report;
+pub mod run;
 pub mod search;
 
+pub use consolidate::handle_consolidate;
 pub use doctor::handle_doctor;
+pub use explain::handle_explain;
 pub use export_import::{handle_export, handle_import};
+pub use handoff::handle_handoff;
 pub use index::handle_index;
 pub use init::handle_init;
+pub use memify::handle_memify;
 pub use outline::handle_outline;
+pub use read::handle_read;
+pub use report::handle_report;
+pub use run::handle_run;
 pub use search::handle_search;

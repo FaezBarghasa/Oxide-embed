@@ -20,3 +20,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 directories.workspace = true
 sha2.workspace = true
+
+[features]
+cuda = ["candle-core/cuda"]
+metal = ["candle-core/metal"]

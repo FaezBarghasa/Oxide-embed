@@ -1,7 +1,7 @@
+use crate::error::{OxideError, Result};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use crate::error::{OxideError, Result};
 
 pub const CONFIG_FILENAME: &str = "config.toml";
 
@@ -151,8 +151,8 @@ impl OxideConfig {
 
     pub fn save_to_dir<P: AsRef<Path>>(&self, dir: P) -> Result<()> {
         let path = dir.as_ref().join(CONFIG_FILENAME);
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| OxideError::Config(e.to_string()))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| OxideError::Config(e.to_string()))?;
         fs::write(path, content)?;
         Ok(())
     }
