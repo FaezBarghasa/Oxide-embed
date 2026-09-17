@@ -144,4 +144,27 @@ DEFINE FIELD output_tokens ON token_ledger TYPE int;
 DEFINE FIELD reasoning_tokens ON token_ledger TYPE int;
 DEFINE FIELD estimated_cost_usd ON token_ledger TYPE float;
 DEFINE FIELD recorded_at ON token_ledger TYPE datetime DEFAULT time::now();
+
+-- Memanto Typed Semantic Memory Tables
+DEFINE TABLE memory_record SCHEMAFULL;
+DEFINE FIELD project_id ON memory_record TYPE string;
+DEFINE FIELD session_id ON memory_record TYPE option<string>;
+DEFINE FIELD kind ON memory_record TYPE string;
+DEFINE FIELD title ON memory_record TYPE string;
+DEFINE FIELD content ON memory_record TYPE string;
+DEFINE FIELD tags ON memory_record TYPE array<string>;
+DEFINE FIELD symbol_ref ON memory_record TYPE option<string>;
+DEFINE FIELD status ON memory_record TYPE string DEFAULT "active";
+DEFINE FIELD superseded_by ON memory_record TYPE option<string>;
+DEFINE FIELD embedding ON memory_record TYPE option<array<float>>;
+DEFINE FIELD created_at ON memory_record TYPE datetime DEFAULT time::now();
+DEFINE FIELD valid_until ON memory_record TYPE option<datetime>;
+DEFINE INDEX idx_memory_kind ON memory_record FIELDS kind;
+DEFINE INDEX idx_memory_status ON memory_record FIELDS status;
+
+DEFINE TABLE governs SCHEMAFULL;
+DEFINE FIELD in ON governs TYPE record<memory_record>;
+DEFINE FIELD out ON governs TYPE record<symbol>;
+DEFINE FIELD relation ON governs TYPE string DEFAULT "governs";
+DEFINE FIELD created_at ON governs TYPE datetime DEFAULT time::now();
 "#;
