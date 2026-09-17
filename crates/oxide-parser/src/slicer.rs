@@ -26,15 +26,14 @@ impl SymbolSlicer {
         start_line: usize,
         end_line: usize,
     ) -> Result<String> {
-        let file = File::open(file_path.as_ref())
-            .map_err(|e| OxideError::Io(format!("Failed to open {}: {}", file_path.as_ref().display(), e)))?;
+        let file = File::open(file_path.as_ref())?;
         let reader = BufReader::new(file);
 
         let mut extracted_lines = Vec::new();
         for (idx, line_res) in reader.lines().enumerate() {
             let line_num = idx + 1;
             if line_num >= start_line && line_num <= end_line {
-                let line = line_res.map_err(|e| OxideError::Io(e.to_string()))?;
+                let line = line_res?;
                 extracted_lines.push(line);
             }
             if line_num > end_line {
@@ -65,12 +64,13 @@ impl SymbolSlicer {
     /// Extract a target symbol from code using Tree-sitter and slice its source lines.
     pub fn extract_and_slice(
         file_id: &FileId,
-        file_path: &Path,
+        _file_path: &Path,
         content: &str,
         target_symbol: &str,
         language: crate::Language,
     ) -> Result<Option<SlicedSymbol>> {
-        let extractor = crate::languages::get_extractor(language)?;
+        let extractor = crate::languages::get_extractor(language)
+            .ok_or_else(|| OxideError::Parser(format!("Unsupported language: {:?}", language)))?;
         let symbols = extractor.extract_symbols(file_id, content);
 
         if let Some(sym) = symbols.into_iter().find(|s| s.name == target_symbol || s.qualified_name.as_deref() == Some(target_symbol)) {

@@ -35,16 +35,21 @@ pub async fn handle_context(
     let cerebrum_path = oxide_dir.join("docs").join("CEREBRUM.md");
     if cerebrum_path.exists() {
         let c_text = std::fs::read_to_string(&cerebrum_path)?;
-        for line in c_text.lines() {
+        for (idx, line) in c_text.lines().enumerate() {
             let trimmed = line.trim();
             if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
+                let rule_str = trimmed
+                    .trim_start_matches("- ")
+                    .trim_start_matches("* ")
+                    .to_string();
                 rules.push(CerebrumRule {
-                    rule: trimmed
-                        .trim_start_matches("- ")
-                        .trim_start_matches("* ")
-                        .to_string(),
-                    source_cluster: None,
-                    created_at: chrono::Utc::now(),
+                    id: format!("rule_{}", idx),
+                    title: format!("Rule {}", idx + 1),
+                    condition_pattern: "context".into(),
+                    prescribed_solution: rule_str,
+                    confidence: 0.9,
+                    source_incidents: vec![],
+                    created_at: chrono::Utc::now().timestamp(),
                 });
             }
         }
