@@ -1,5 +1,5 @@
 use oxide_core::error::{OxideError, Result};
-use oxide_core::{OxideConfig, OxideManifest};
+use oxide_core::{resolve_db_path, OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use oxide_parser::languages::get_extractor;
@@ -15,7 +15,7 @@ pub async fn handle_index(project_root: &Path, _force: bool) -> Result<()> {
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let config = OxideConfig::load_from_dir(&oxide_dir)?;
-    let db_path = oxide_dir.join(&manifest.storage.path);
+    let db_path = resolve_db_path(project_root)?;
     let store = SurrealProjectStore::open(&db_path).await?;
 
     let start_time = Instant::now();
@@ -39,19 +39,24 @@ pub async fn handle_index(project_root: &Path, _force: bool) -> Result<()> {
 
     let mut total_symbols = 0;
     let mut total_chunks = 0;
+    let mut total_call_edges = 0;
+    let mut total_import_edges = 0;
     let mut total_doc_sections = 0;
     let mut total_doc_references = 0;
     let mut all_project_symbols = Vec::new();
 
-    // 1. First Pass: Files, Symbols, Chunks, and AST Anatomy
+    // 1. First Pass: Files, Symbols, Chunks, Call Graph, and Imports
     for (file_record, content) in &files {
         store.upsert_file(file_record).await?;
 
         let lang = Language::from_path(&file_record.relative_path);
-        let symbols = if let Some(extractor) = get_extractor(lang) {
-            extractor.extract_symbols(&file_record.id, content)
+        let (symbols, call_edges, import_edges) = if let Some(extractor) = get_extractor(lang) {
+            let syms = extractor.extract_symbols(&file_record.id, content);
+            let calls = extractor.extract_call_edges(&file_record.id, content, &syms);
+            let imports = extractor.extract_import_edges(&file_record.id, content);
+            (syms, calls, imports)
         } else {
-            Vec::new()
+            (Vec::new(), Vec::new(), Vec::new())
         };
 
         for sym in &symbols {
@@ -60,12 +65,22 @@ pub async fn handle_index(project_root: &Path, _force: bool) -> Result<()> {
         }
         total_symbols += symbols.len();
 
+        for call in &call_edges {
+            let _ = store.upsert_call_edge(call).await;
+            total_call_edges += 1;
+        }
+
+        for import in &import_edges {
+            let _ = store.upsert_import_edge(import).await;
+            total_import_edges += 1;
+        }
+
         let mut chunks = chunker.chunk_file(&file_record.id, content, &symbols);
         for chunk in &mut chunks {
             let emb = embedder.embed(&chunk.text).await?;
             chunk.embedding = Some(emb);
             chunk.embedding_model = Some(manifest.embedding.model.clone());
-            chunk.embedding_dim = Some(manifest.embedding.dimension);
+            chunk.embedding_dim = Some(embedder.dimension());
             chunk.vector_set_id = Some(manifest.embedding.vector_set_id.clone());
 
             store.upsert_chunk(chunk).await?;
@@ -112,6 +127,8 @@ pub async fn handle_index(project_root: &Path, _force: bool) -> Result<()> {
     println!("  Files indexed:          {}", files.len());
     println!("  Symbols extracted:      {}", total_symbols);
     println!("  Chunks indexed:         {}", total_chunks);
+    println!("  Call edges created:     {}", total_call_edges);
+    println!("  Import edges created:   {}", total_import_edges);
     println!("  Doc sections linked:    {}", total_doc_sections);
     println!("  Doc references created: {}", total_doc_references);
 
