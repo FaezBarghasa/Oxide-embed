@@ -45,6 +45,7 @@ directories = "6.0.0"
 ignore = "0.4.23"
 walkdir = "2.5.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+notify = "8.0.0"
 
 # SurrealDB
 surrealdb = { version = "3.2.4", default-features = false, features = [

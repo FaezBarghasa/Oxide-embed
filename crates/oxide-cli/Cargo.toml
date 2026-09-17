@@ -22,3 +22,4 @@ thiserror.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
+notify.workspace = true

@@ -1,7 +1,9 @@
+pub mod budget;
 pub mod chunk;
 pub mod cognify;
 pub mod condenser;
 pub mod config;
+pub mod context_builder;
 pub mod embedding;
 pub mod error;
 pub mod file;
@@ -13,10 +15,12 @@ pub mod memify;
 pub mod read_guard;
 pub mod symbol;
 
+pub use budget::{BudgetCandidate, BudgetItem, BudgetPackResult, TokenBudgetPacker, TokenEstimator};
 pub use chunk::{ChunkKind, ChunkRecord};
 pub use cognify::{CognifyResult, DocReferenceEdge, DocSection};
 pub use condenser::{CondensedOutput, TerminalCondenser};
 pub use config::OxideConfig;
+pub use context_builder::{ContextSynthesizer, SynthesizedContext};
 pub use embedding::{EmbeddingMetadata, PoolingMethod};
 pub use error::{OxideError, Result};
 pub use file::FileRecord;
