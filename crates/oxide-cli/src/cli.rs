@@ -159,8 +159,46 @@ pub enum Commands {
     )]
     Consolidate,
 
+    #[command(about = "Query inbound callers of a target symbol")]
+    Callers {
+        #[arg(help = "Target symbol name or qualified path")]
+        symbol: String,
+
+        #[arg(short, long, help = "Token budget ceiling")]
+        budget: Option<usize>,
+    },
+
+    #[command(about = "Query outbound callees invoked by a target symbol")]
+    Callees {
+        #[arg(help = "Target symbol name or qualified path")]
+        symbol: String,
+
+        #[arg(short, long, help = "Token budget ceiling")]
+        budget: Option<usize>,
+    },
+
+    #[command(about = "Show bidirectional blast radius and impact graph for a symbol")]
+    Impact {
+        #[arg(help = "Target symbol name")]
+        symbol: String,
+    },
+
+    #[command(about = "Show token density and context map tree across project directories")]
+    Tokenmap {
+        #[arg(short, long, default_value = "8", help = "Maximum directory depth")]
+        depth: usize,
+    },
+
+    #[command(about = "Automatically install and configure Oxide-embed hooks for AI agents")]
+    InstallHook {
+        #[arg(short, long, default_value = "all", help = "Target tool: all, antigravity, claude, cursor")]
+        tool: String,
+    },
+
     #[command(
-        about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration"
+        about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration",
+        alias = "mcp-serve",
+        alias = "serve"
     )]
     Mcp,
 

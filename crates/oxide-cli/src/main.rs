@@ -6,9 +6,10 @@ mod watcher;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_consolidate, handle_context, handle_doctor, handle_explain, handle_export,
-    handle_handoff, handle_import, handle_index, handle_init, handle_memify, handle_outline,
-    handle_read, handle_report, handle_run, handle_search,
+    handle_callers, handle_callees, handle_consolidate, handle_context, handle_doctor,
+    handle_explain, handle_export, handle_handoff, handle_impact, handle_import, handle_index,
+    handle_init, handle_install_hook, handle_memify, handle_outline, handle_read, handle_report,
+    handle_run, handle_search, handle_tokenmap,
 };
 use mcp::McpServer;
 use std::env;
@@ -39,6 +40,11 @@ async fn main() -> ExitCode {
             budget,
         } => handle_search(project_root, &query, limit, with_graph, hops, budget).await,
         Commands::Explain { symbol, hops } => handle_explain(project_root, &symbol, hops).await,
+        Commands::Callers { symbol, budget } => handle_callers(project_root, &symbol, budget).await,
+        Commands::Callees { symbol, budget } => handle_callees(project_root, &symbol, budget).await,
+        Commands::Impact { symbol } => handle_impact(project_root, &symbol).await,
+        Commands::Tokenmap { depth } => handle_tokenmap(project_root, depth).await,
+        Commands::InstallHook { tool } => handle_install_hook(project_root, &tool).await,
         Commands::Run { command } => handle_run(project_root, &command).await,
         Commands::Read {
             path,
