@@ -1,5 +1,6 @@
-use oxide_core::OxideManifest;
+use oxide_core::budget::{BudgetCandidate, TokenBudgetPacker};
 use oxide_core::error::{OxideError, Result};
+use oxide_core::OxideManifest;
 use oxide_db::{GraphTraversalService, ProjectStore, SearchQuery, SurrealProjectStore};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use std::path::Path;
@@ -10,6 +11,7 @@ pub async fn handle_search(
     limit: usize,
     with_graph: bool,
     hops: usize,
+    budget: Option<usize>,
 ) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
@@ -37,11 +39,12 @@ pub async fn handle_search(
         return Ok(());
     }
 
-    println!("Top {} results for '{}':\n", hits.len(), query_str);
+    let mut candidates = Vec::new();
+
     for (idx, hit) in hits.iter().enumerate() {
         let sym = hit.symbol_name.as_deref().unwrap_or("<file>");
-        println!(
-            "{}. [{:.2}] {} :: {} (L{}-L{})",
+        let mut item_block = format!(
+            "{}. [{:.2}] {} :: {} (L{}-L{})\n",
             idx + 1,
             hit.score,
             hit.file_path,
@@ -50,7 +53,7 @@ pub async fn handle_search(
             hit.end_line
         );
         if let Some(out) = &hit.outline_or_signature {
-            println!("   {}", out);
+            item_block.push_str(&format!("   {}\n", out));
         }
 
         if with_graph
@@ -58,13 +61,39 @@ pub async fn handle_search(
             && let Ok(Some(subgraph)) =
                 GraphTraversalService::get_subgraph(&store, symbol_name, hops).await
         {
-            println!(
-                "\n   [Knowledge Subgraph ({} hops)]:\n   {}",
+            item_block.push_str(&format!(
+                "\n   [Knowledge Subgraph ({} hops)]:\n   {}\n",
                 hops,
                 subgraph.to_compact_string().replace('\n', "\n   ")
-            );
+            ));
         }
-        println!();
+
+        candidates.push(BudgetCandidate::new(
+            format!("{}:{}", hit.file_path, hit.start_line),
+            sym,
+            item_block,
+            hit.score,
+        ));
+    }
+
+    if let Some(b) = budget {
+        let packed = TokenBudgetPacker::pack(candidates, b);
+        println!(
+            "🎯 Search Results for '{}' (Packed {}/{} within {} token budget, used ~{} tokens):\n",
+            query_str,
+            packed.included.len(),
+            hits.len(),
+            b,
+            packed.used_tokens
+        );
+        for item in packed.included {
+            println!("{}", item.content);
+        }
+    } else {
+        println!("Top {} results for '{}':\n", hits.len(), query_str);
+        for item in candidates {
+            println!("{}", item.content);
+        }
     }
 
     Ok(())

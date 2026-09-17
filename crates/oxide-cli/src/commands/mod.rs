@@ -1,4 +1,5 @@
 pub mod consolidate;
+pub mod context;
 pub mod doctor;
 pub mod explain;
 pub mod export_import;
@@ -13,6 +14,7 @@ pub mod run;
 pub mod search;
 
 pub use consolidate::handle_consolidate;
+pub use context::handle_context;
 pub use doctor::handle_doctor;
 pub use explain::handle_explain;
 pub use export_import::{handle_export, handle_import};

@@ -29,11 +29,15 @@ impl ContextSynthesizer {
 
         // Layer 1: Cerebrum Rules (High Priority)
         for (idx, r) in rules.into_iter().enumerate() {
+            let rule_text = format!(
+                "- **[Rule: {}]** When `{}` => `{}` (confidence: {:.2})",
+                r.title, r.condition_pattern, r.prescribed_solution, r.confidence
+            );
             let item = BudgetCandidate::new(
                 format!("rule_{}", idx),
-                "Cerebrum Architectural Rule",
-                format!("- [Rule] {}", r.rule),
-                90.0, // High score
+                format!("Cerebrum Rule: {}", r.title),
+                rule_text,
+                90.0,
             );
             candidates.push(item);
         }
@@ -48,8 +52,8 @@ impl ContextSynthesizer {
         let mut handoff_summary = String::new();
         if let Some(ref h) = handoff {
             handoff_summary = format!(
-                "## 🎯 Active Project Objective\n**Objective**: {}\n**Branch**: {}\n**Next Step**: {}\n\n",
-                h.objective, h.active_branch, h.next_step
+                "## 🎯 Active Project Objective\n- **Active Goal**: {}\n- **Next Action**: {}\n\n",
+                h.active_goal, h.next_action
             );
             handoff_tokens = TokenEstimator::estimate_tokens(&handoff_summary);
         }
@@ -111,19 +115,16 @@ mod tests {
 
     #[test]
     fn test_context_synthesizer_building() {
-        let handoff = HandoffCheckpoint {
-            objective: "Implement SPI Flash driver".into(),
-            active_branch: "feat/spi".into(),
-            files_modified: vec!["crates/spi.rs".into()],
-            pending_errors: vec![],
-            next_step: "Run probe-rs test".into(),
-            created_at: chrono::Utc::now(),
-        };
+        let handoff = HandoffCheckpoint::new("session_1", "Implement SPI Flash driver", "Run probe-rs test");
 
         let rules = vec![CerebrumRule {
-            rule: "Never use unwrap in bare-metal SPI handlers".into(),
-            source_cluster: Some("spi_faults".into()),
-            created_at: chrono::Utc::now(),
+            id: "rule_1".into(),
+            title: "SPI Safety".into(),
+            condition_pattern: "bare-metal SPI".into(),
+            prescribed_solution: "Never use unwrap in bare-metal SPI handlers".into(),
+            confidence: 0.95,
+            source_incidents: vec![],
+            created_at: 0,
         }];
 
         let candidates = vec![

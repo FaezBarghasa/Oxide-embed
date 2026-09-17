@@ -53,6 +53,22 @@ pub enum Commands {
     },
 
     #[command(
+        about = "Synthesize multi-layer token-budgeted context for a task (active status + Cerebrum rules + 2-hop GraphRAG)"
+    )]
+    Context {
+        #[arg(help = "Task description or query")]
+        task: String,
+
+        #[arg(
+            short,
+            long,
+            default_value = "1500",
+            help = "Maximum token budget for synthesized context"
+        )]
+        budget: usize,
+    },
+
+    #[command(
         about = "Search project memory (semantic + lexical hybrid with optional GraphRAG expansion)"
     )]
     Search {
@@ -71,6 +87,9 @@ pub enum Commands {
             help = "Number of hops for subgraph expansion"
         )]
         hops: usize,
+
+        #[arg(long, help = "Token budget ceiling for packed search results")]
+        budget: Option<usize>,
     },
 
     #[command(
@@ -97,11 +116,14 @@ pub enum Commands {
     },
 
     #[command(
-        about = "Read a file through SessionReadGuard (suppresses duplicate reads and provides AST outline stubs)"
+        about = "Read a file through SessionReadGuard or surgically slice an AST symbol"
     )]
     Read {
         #[arg(help = "Relative path to target file")]
         path: PathBuf,
+
+        #[arg(short, long, help = "Surgically extract and slice only a specific symbol")]
+        symbol: Option<String>,
 
         #[arg(long, help = "Force full file content read even if unchanged")]
         force: bool,
@@ -134,6 +156,12 @@ pub enum Commands {
         about = "Consolidate buglogs and recurring memory patterns into .oxide/docs/CEREBRUM.md"
     )]
     Consolidate,
+
+    #[command(about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration")]
+    Mcp,
+
+    #[command(about = "Start real-time debounced file watcher for incremental sub-millisecond AST re-indexing")]
+    Watch,
 
     #[command(about = "Export memory to portable .oxem bundle")]
     Export {

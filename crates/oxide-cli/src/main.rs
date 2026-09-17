@@ -1,15 +1,19 @@
 mod cli;
 mod commands;
+mod mcp;
+mod watcher;
 
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_consolidate, handle_doctor, handle_explain, handle_export, handle_handoff,
-    handle_import, handle_index, handle_init, handle_memify, handle_outline, handle_read,
-    handle_report, handle_run, handle_search,
+    handle_consolidate, handle_context, handle_doctor, handle_explain, handle_export,
+    handle_handoff, handle_import, handle_index, handle_init, handle_memify, handle_outline,
+    handle_read, handle_report, handle_run, handle_search,
 };
+use mcp::McpServer;
 use std::env;
 use std::process::ExitCode;
+use watcher::WorkspaceWatcher;
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -26,15 +30,21 @@ async fn main() -> ExitCode {
             handle_index(project_root, force).await
         }
         Commands::Outline { path } => handle_outline(project_root, &path).await,
+        Commands::Context { task, budget } => handle_context(project_root, &task, budget).await,
         Commands::Search {
             query,
             limit,
             with_graph,
             hops,
-        } => handle_search(project_root, &query, limit, with_graph, hops).await,
+            budget,
+        } => handle_search(project_root, &query, limit, with_graph, hops, budget).await,
         Commands::Explain { symbol, hops } => handle_explain(project_root, &symbol, hops).await,
         Commands::Run { command } => handle_run(project_root, &command).await,
-        Commands::Read { path, force } => handle_read(project_root, &path, force).await,
+        Commands::Read {
+            path,
+            symbol,
+            force,
+        } => handle_read(project_root, &path, symbol.as_deref(), force).await,
         Commands::Handoff { goal, next } => handle_handoff(project_root, goal, next).await,
         Commands::Report => handle_report(project_root).await,
         Commands::Memify {
@@ -42,6 +52,14 @@ async fn main() -> ExitCode {
             prune_threshold,
         } => handle_memify(project_root, decay_days, prune_threshold).await,
         Commands::Consolidate => handle_consolidate(project_root).await,
+        Commands::Mcp => {
+            let server = McpServer::new(project_root);
+            server.run_stdio().await
+        }
+        Commands::Watch => {
+            let watcher = WorkspaceWatcher::new(project_root);
+            watcher.run().await
+        }
         Commands::Export { out } => handle_export(project_root, &out).await,
         Commands::Import { bundle } => handle_import(project_root, &bundle).await,
     };
