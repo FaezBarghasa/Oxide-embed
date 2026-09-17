@@ -10,6 +10,8 @@ pub enum Language {
     Go,
     Java,
     Kotlin,
+    C,
+    Cpp,
     Mojo,
     Slint,
     Markdown,
@@ -99,6 +101,8 @@ impl Language {
         match ext.as_str() {
             // Code
             "rs" => Self::Rust,
+            "c" | "h" => Self::C,
+            "cpp" | "hpp" | "cc" | "cxx" | "hh" => Self::Cpp,
             "py" | "pyi" => Self::Python,
             "js" | "mjs" | "cjs" | "jsx" => Self::JavaScript,
             "ts" | "mts" | "cts" | "tsx" => Self::TypeScript,

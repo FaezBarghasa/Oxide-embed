@@ -57,8 +57,7 @@ pub async fn handle_context(
 
     // 3. Search Knowledge Graph & Vectors
     let mut candidates = Vec::new();
-    let db_path = oxide_dir.join("db");
-    if db_path.exists() {
+    if let Ok(db_path) = oxide_core::resolve_db_path(project_root) {
         let store = SurrealProjectStore::open(&db_path).await?;
         let embedder = CandleBertEmbedder::new_offline();
         let embedding = embedder.embed(task_query).await.ok();

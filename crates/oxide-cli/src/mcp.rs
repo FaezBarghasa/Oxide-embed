@@ -58,8 +58,7 @@ impl McpServer {
         let mut stdout = io::stdout();
         let reader = stdin.lock();
 
-        let db_path = self.workspace_dir.join(".oxide").join("db");
-        let store = if db_path.exists() {
+        let store = if let Ok(db_path) = oxide_core::resolve_db_path(&self.workspace_dir) {
             SurrealProjectStore::open(&db_path).await.ok()
         } else {
             None

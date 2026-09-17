@@ -7,11 +7,24 @@ pub mod rust;
 pub mod typescript;
 
 use crate::language::Language;
-use oxide_core::SymbolRecord;
 use oxide_core::id::FileId;
+use oxide_core::{CallEdge, ImportEdge, SymbolRecord};
 
 pub trait LanguageExtractor {
     fn extract_symbols(&self, file_id: &FileId, content: &str) -> Vec<SymbolRecord>;
+
+    fn extract_call_edges(
+        &self,
+        _file_id: &FileId,
+        _content: &str,
+        _symbols: &[SymbolRecord],
+    ) -> Vec<CallEdge> {
+        Vec::new()
+    }
+
+    fn extract_import_edges(&self, _file_id: &FileId, _content: &str) -> Vec<ImportEdge> {
+        Vec::new()
+    }
 }
 
 pub fn get_extractor(lang: Language) -> Option<Box<dyn LanguageExtractor + Send + Sync>> {
@@ -24,7 +37,9 @@ pub fn get_extractor(lang: Language) -> Option<Box<dyn LanguageExtractor + Send 
         Language::Go => Some(Box::new(go::GoExtractor)),
         Language::Java | Language::Kotlin => Some(Box::new(java::JavaExtractor)),
         Language::Bash => Some(Box::new(bash::BashExtractor)),
-        Language::Slint
+        Language::C
+        | Language::Cpp
+        | Language::Slint
         | Language::Markdown
         | Language::Xml
         | Language::Html
