@@ -27,13 +27,14 @@ impl WorkspaceWatcher {
     }
 
     pub async fn run(&self) -> Result<()> {
-        let db_path = self.workspace_dir.join(".oxide").join("db");
-        if !db_path.exists() {
-            return Err(OxideError::Config(
-                "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first."
-                    .into(),
-            ));
+        let oxide_dir = self.workspace_dir.join(".oxide");
+        if !oxide_dir.exists() {
+            return Err(OxideError::NotInitialized(self.workspace_dir.clone()));
         }
+
+        let manifest = oxide_core::OxideManifest::load_from_dir(&oxide_dir)?;
+        let project_id = manifest.project_id.clone();
+        let db_path = oxide_core::resolve_db_path(&self.workspace_dir)?;
 
         let store = SurrealProjectStore::open(&db_path).await?;
         let embedder = CandleBertEmbedder::new_offline();
@@ -75,7 +76,7 @@ impl WorkspaceWatcher {
                 for file_path in batch {
                     let start = Instant::now();
                     match self
-                        .reindex_file(&file_path, &store, &embedder, &chunker)
+                        .reindex_file(&file_path, &project_id, &store, &embedder, &chunker)
                         .await
                     {
                         Ok(sym_count) => {
@@ -119,6 +120,7 @@ impl WorkspaceWatcher {
     async fn reindex_file(
         &self,
         path: &Path,
+        project_id: &ProjectId,
         store: &SurrealProjectStore,
         embedder: &CandleBertEmbedder,
         chunker: &Chunker,
@@ -127,7 +129,6 @@ impl WorkspaceWatcher {
         let rel_path = path.strip_prefix(&self.workspace_dir).unwrap_or(path);
         let rel_str = rel_path.to_string_lossy().to_string();
         let fid = FileId::from_relative_path(&rel_str);
-        let pid = ProjectId::new_v7();
 
         let lang = Language::from_path(path);
         let lang_str = if lang != Language::Unknown {
@@ -138,7 +139,7 @@ impl WorkspaceWatcher {
 
         let file_rec = FileRecord {
             id: fid.clone(),
-            project_id: pid,
+            project_id: project_id.clone(),
             relative_path: rel_str.clone(),
             language: lang_str,
             content_hash: Some(oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(
@@ -160,11 +161,21 @@ impl WorkspaceWatcher {
                     store.upsert_symbol(sym).await?;
                 }
 
+                let call_edges = ext.extract_call_edges(&fid, &content, &symbols);
+                for edge in &call_edges {
+                    let _ = store.upsert_call_edge(edge).await;
+                }
+
+                let import_edges = ext.extract_import_edges(&fid, &content);
+                for edge in &import_edges {
+                    let _ = store.upsert_import_edge(edge).await;
+                }
+
                 let chunks = chunker.chunk_file(&fid, &content, &symbols);
                 for mut chunk in chunks {
                     if let Ok(emb) = embedder.embed(&chunk.text).await {
                         chunk.embedding = Some(emb);
-                        chunk.embedding_dim = Some(384);
+                        chunk.embedding_dim = Some(embedder.dimension());
                         chunk.embedding_model = Some("bge-small-en-v1.5".into());
                     }
                     store.upsert_chunk(&chunk).await?;
