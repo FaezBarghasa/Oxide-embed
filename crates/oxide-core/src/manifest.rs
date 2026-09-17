@@ -128,4 +128,46 @@ impl OxideManifest {
         }
         Ok(())
     }
+
+    pub fn db_path<P: AsRef<Path>>(&self, oxide_dir: P) -> std::path::PathBuf {
+        let dir = oxide_dir.as_ref();
+        let target = dir.join(&self.storage.path);
+        if target.exists() {
+            target
+        } else if dir.join("project.db").exists() {
+            dir.join("project.db")
+        } else if dir.join("db").exists() {
+            dir.join("db")
+        } else {
+            target
+        }
+    }
+}
+
+pub fn resolve_db_path<P: AsRef<Path>>(project_root: P) -> Result<std::path::PathBuf> {
+    let oxide_dir = project_root.as_ref().join(".oxide");
+    if !oxide_dir.exists() {
+        return Err(OxideError::NotInitialized(project_root.as_ref().to_path_buf()));
+    }
+
+    if let Ok(manifest) = OxideManifest::load_from_dir(&oxide_dir) {
+        let p = manifest.db_path(&oxide_dir);
+        if p.exists() {
+            return Ok(p);
+        }
+    }
+
+    let project_db = oxide_dir.join("project.db");
+    if project_db.exists() {
+        return Ok(project_db);
+    }
+
+    let legacy_db = oxide_dir.join("db");
+    if legacy_db.exists() {
+        return Ok(legacy_db);
+    }
+
+    Err(OxideError::Config(
+        "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index' first.".into(),
+    ))
 }

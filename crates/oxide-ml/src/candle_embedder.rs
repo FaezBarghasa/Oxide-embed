@@ -19,12 +19,32 @@ pub struct CandleBertEmbedder {
 
 impl CandleBertEmbedder {
     pub fn new_offline() -> Self {
-        Self {
-            model: None,
-            tokenizer: None,
-            device: select_device("auto"),
-            fallback: MockEmbedder::new(384),
-            dimension: 384,
+        if let Ok(embedder) = Self::load_default() {
+            embedder
+        } else {
+            Self {
+                model: None,
+                tokenizer: None,
+                device: select_device("auto"),
+                fallback: MockEmbedder::new(384),
+                dimension: 384,
+            }
+        }
+    }
+
+    pub fn load_default() -> Result<Self> {
+        let base_dir = crate::model::ModelManager::default_models_dir()?.join("bge-small-en-v1.5");
+        let weights = base_dir.join("model.safetensors");
+        let config = base_dir.join("config.json");
+        let tokenizer = base_dir.join("tokenizer.json");
+
+        if weights.exists() && config.exists() && tokenizer.exists() {
+            Self::load(weights, config, tokenizer)
+        } else {
+            Err(OxideError::Ml(format!(
+                "Default model files not found in {}",
+                base_dir.display()
+            )))
         }
     }
 
