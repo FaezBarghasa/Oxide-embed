@@ -3710,6 +3710,7 @@ dependencies = [
  "candle-transformers",
  "criterion",
  "directories",
+ "ndarray",
  "ort",
  "oxide-core",
  "serde",

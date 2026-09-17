@@ -51,3 +51,30 @@ fn test_vector_clustering() {
     assert_eq!(clusters[0], vec![0, 1]);
     assert_eq!(clusters[1], vec![2]);
 }
+
+#[tokio::test]
+async fn test_onnx_gemma_embedder() {
+    if let Ok(embedder) = oxide_ml::OnnxGemmaEmbedder::load_default() {
+        assert_eq!(embedder.dimension(), 768);
+
+        let text1 = "fn parse_ast_tree(node: &Node) -> Result<Ast>";
+        let text2 = "fn parse_ast_tree(node: &Node) -> Result<Ast>";
+        let text3 = "const CSS_COLOR_BACKGROUND: &str = #ffffff;";
+
+        let emb1 = embedder.embed(text1).await.expect("embed text1");
+        let emb2 = embedder.embed(text2).await.expect("embed text2");
+        let emb3 = embedder.embed(text3).await.expect("embed text3");
+
+        assert_eq!(emb1.len(), 768);
+        assert_eq!(emb1, emb2);
+
+        let norm: f32 = emb1.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!((norm - 1.0).abs() < 1e-4);
+
+        let sim_same = cosine_similarity(&emb1, &emb2);
+        assert!((sim_same - 1.0).abs() < 1e-4);
+
+        let sim_diff = cosine_similarity(&emb1, &emb3);
+        assert!(sim_diff < 0.99);
+    }
+}

@@ -95,11 +95,12 @@ impl Embedder for OnnxGemmaEmbedder {
             .ok_or_else(|| OxideError::Ml("No output tensor returned from ONNX".into()))?;
 
         let (shape, data) = output_tensor
-            .try_extract_raw_tensor::<f32>()
+            .try_extract_tensor::<f32>()
             .map_err(|e| OxideError::Ml(format!("Failed to extract output tensor: {e}")))?;
 
-        let hidden_dim = if shape.len() == 3 {
-            shape[2] as usize
+        let shape_slice: &[i64] = &shape[..];
+        let hidden_dim = if shape_slice.len() == 3 {
+            shape_slice[2] as usize
         } else {
             self.dimension
         };
@@ -107,6 +108,7 @@ impl Embedder for OnnxGemmaEmbedder {
         // Mean-pooling over token sequence
         let mut pooled = vec![0.0f32; hidden_dim];
         let num_tokens = seq_len.max(1);
+
         for t in 0..seq_len {
             for h in 0..hidden_dim {
                 let idx = t * hidden_dim + h;
@@ -134,5 +136,9 @@ impl Embedder for OnnxGemmaEmbedder {
             results.push(self.embed(text).await?);
         }
         Ok(results)
+    }
+
+    fn dimension(&self) -> usize {
+        self.dimension
     }
 }
