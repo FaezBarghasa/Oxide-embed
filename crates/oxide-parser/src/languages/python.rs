@@ -143,23 +143,24 @@ fn traverse_node(
     }
 }
 
-fn traverse_calls(
-    node: Node,
-    content: &str,
-    symbols: &[SymbolRecord],
-    calls: &mut Vec<CallEdge>,
-) {
+fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &mut Vec<CallEdge>) {
     if node.kind() == "call" {
         if let Some(func_node) = node.child_by_field_name("function")
             && let Ok(callee_text) = func_node.utf8_text(content.as_bytes())
         {
             let line = node.start_position().row + 1;
-            let callee_name = callee_text.split('.').last().unwrap_or(callee_text).trim().to_string();
+            let callee_name = callee_text
+                .split('.')
+                .last()
+                .unwrap_or(callee_text)
+                .trim()
+                .to_string();
 
-            if let Some(caller) = symbols
-                .iter()
-                .find(|s| s.start_line <= line && line <= s.end_line && matches!(s.kind, SymbolKind::Function | SymbolKind::Method))
-            {
+            if let Some(caller) = symbols.iter().find(|s| {
+                s.start_line <= line
+                    && line <= s.end_line
+                    && matches!(s.kind, SymbolKind::Function | SymbolKind::Method)
+            }) {
                 calls.push(CallEdge {
                     caller_symbol_id: caller.id.clone(),
                     callee_name,
@@ -175,12 +176,7 @@ fn traverse_calls(
     }
 }
 
-fn traverse_imports(
-    node: Node,
-    content: &str,
-    file_id: &FileId,
-    imports: &mut Vec<ImportEdge>,
-) {
+fn traverse_imports(node: Node, content: &str, file_id: &FileId, imports: &mut Vec<ImportEdge>) {
     let kind = node.kind();
     if kind == "import_statement" || kind == "import_from_statement" {
         if let Ok(import_text) = node.utf8_text(content.as_bytes()) {

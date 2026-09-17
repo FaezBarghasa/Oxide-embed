@@ -1,5 +1,5 @@
-pub mod callers;
 pub mod callees;
+pub mod callers;
 pub mod consolidate;
 pub mod context;
 pub mod doctor;
@@ -18,8 +18,8 @@ pub mod run;
 pub mod search;
 pub mod tokenmap;
 
-pub use callers::handle_callers;
 pub use callees::handle_callees;
+pub use callers::handle_callers;
 pub use consolidate::handle_consolidate;
 pub use context::handle_context;
 pub use doctor::handle_doctor;

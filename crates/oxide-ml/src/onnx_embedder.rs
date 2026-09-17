@@ -32,7 +32,8 @@ impl OnnxGemmaEmbedder {
     }
 
     pub fn load_default() -> Result<Self> {
-        let base_dir = crate::model::ModelManager::default_models_dir()?.join("embeddinggemma-300m");
+        let base_dir =
+            crate::model::ModelManager::default_models_dir()?.join("embeddinggemma-300m");
         let model_path = base_dir.join("model_q4.onnx");
         let tokenizer_path = base_dir.join("tokenizer.json");
 
@@ -58,8 +59,7 @@ impl Embedder for OnnxGemmaEmbedder {
         let raw_ids = encoding.get_ids();
         let max_len = raw_ids.len().min(2048);
         let token_ids: Vec<i64> = raw_ids[..max_len].iter().map(|&id| id as i64).collect();
-        let attention_mask: Vec<i64> = encoding
-            .get_attention_mask()[..max_len]
+        let attention_mask: Vec<i64> = encoding.get_attention_mask()[..max_len]
             .iter()
             .map(|&m| m as i64)
             .collect();

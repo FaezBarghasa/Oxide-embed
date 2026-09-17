@@ -29,7 +29,7 @@ pub use file::FileRecord;
 pub use handoff::HandoffCheckpoint;
 pub use id::{ChunkId, FileId, ProjectId, SymbolId, WorkspaceId};
 pub use ledger::{TokenLedger, TokenSavingRecord, TokenUsageRecord};
-pub use manifest::{resolve_db_path, OxideManifest};
+pub use manifest::{OxideManifest, resolve_db_path};
 pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
 pub use symbol::{CallEdge, ImportEdge, SymbolKind, SymbolRecord};

@@ -5,7 +5,10 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 pub async fn handle_tokenmap(project_root: &Path, max_depth: usize) -> Result<()> {
-    println!("🌳 Project Token & Context Map ({})\n", project_root.display());
+    println!(
+        "🌳 Project Token & Context Map ({})\n",
+        project_root.display()
+    );
 
     let mut dir_tokens: BTreeMap<String, usize> = BTreeMap::new();
     let mut file_tokens: Vec<(String, usize)> = Vec::new();
@@ -69,7 +72,11 @@ pub async fn handle_tokenmap(project_root: &Path, max_depth: usize) -> Result<()
         println!("  {:<45} {:>8} tokens  ({:>5.1}%)", file, tokens, pct);
     }
 
-    println!("\n⚡ Total Workspace Weight: {} tokens (~{:.2} KB content)", total_tokens, total_tokens as f64 * 4.0 / 1024.0);
+    println!(
+        "\n⚡ Total Workspace Weight: {} tokens (~{:.2} KB content)",
+        total_tokens,
+        total_tokens as f64 * 4.0 / 1024.0
+    );
 
     Ok(())
 }

@@ -28,7 +28,10 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
             let target_path = agy_mcp_dir.join("config.json");
             if let Ok(content) = serde_json::to_string_pretty(&config_json) {
                 let _ = fs::write(&target_path, content);
-                println!("  ✅ Configured Google Antigravity / Gemini MCP at {}", target_path.display());
+                println!(
+                    "  ✅ Configured Google Antigravity / Gemini MCP at {}",
+                    target_path.display()
+                );
             }
         }
     }
@@ -44,7 +47,10 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
             }
         });
         println!("  ✅ Claude Code MCP snippet:");
-        println!("     claude mcp add oxide-embed -- {} mcp-serve", binary_path);
+        println!(
+            "     claude mcp add oxide-embed -- {} mcp-serve",
+            binary_path
+        );
         if !claude_cfg.exists() {
             if let Ok(content) = serde_json::to_string_pretty(&claude_entry) {
                 let _ = fs::write(&claude_cfg, content);
@@ -67,7 +73,10 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
             });
             if let Ok(content) = serde_json::to_string_pretty(&cursor_json) {
                 let _ = fs::write(&cursor_mcp, content);
-                println!("  ✅ Configured Cursor project MCP at {}", cursor_mcp.display());
+                println!(
+                    "  ✅ Configured Cursor project MCP at {}",
+                    cursor_mcp.display()
+                );
             }
         }
     }

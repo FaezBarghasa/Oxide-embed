@@ -99,10 +99,7 @@ impl Embedder for CandleQwenEmbedder {
             .map_err(|e| OxideError::Ml(format!("Qwen forward error: {e}")))?;
 
         // Mean pool across sequence dimension
-        let mean = (logits
-            .sum(1)
-            .map_err(|e| OxideError::Ml(e.to_string()))?
-            / (seq_len as f64))
+        let mean = (logits.sum(1).map_err(|e| OxideError::Ml(e.to_string()))? / (seq_len as f64))
             .map_err(|e| OxideError::Ml(e.to_string()))?;
 
         let vec: Vec<f32> = mean

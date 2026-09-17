@@ -1,5 +1,5 @@
 use oxide_core::error::{OxideError, Result};
-use oxide_core::{resolve_db_path, OxideConfig, OxideManifest};
+use oxide_core::{OxideConfig, OxideManifest, resolve_db_path};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use oxide_parser::languages::get_extractor;

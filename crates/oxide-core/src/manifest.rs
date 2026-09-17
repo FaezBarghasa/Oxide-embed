@@ -147,7 +147,9 @@ impl OxideManifest {
 pub fn resolve_db_path<P: AsRef<Path>>(project_root: P) -> Result<std::path::PathBuf> {
     let oxide_dir = project_root.as_ref().join(".oxide");
     if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.as_ref().to_path_buf()));
+        return Err(OxideError::NotInitialized(
+            project_root.as_ref().to_path_buf(),
+        ));
     }
 
     if let Ok(manifest) = OxideManifest::load_from_dir(&oxide_dir) {

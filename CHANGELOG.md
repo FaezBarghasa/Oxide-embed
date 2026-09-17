@@ -11,58 +11,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### 1. Multi-Distro Linux Packaging & Automated Installation
+#### 1. Multi-Model Production Embedding Engines (`oxide-ml`)
+- **`EmbeddingGemma-300M` (ONNX Runtime)**:
+  - Hardware-accelerated ONNX Runtime (`ort 2.0.0-rc.13`) integration with `libonnxruntime.so`.
+  - 768-dimensional embeddings with token truncation safety and L2 normalization.
+- **`Qwen3-Embedding-0.6B` (Candle)**:
+  - High-precision 1024-dimensional embeddings implemented via pure `candle-core` / `candle-nn`.
+  - Thread-safe Mutex forward pass for batch and concurrent indexing without Python runtime.
+- **`BGE-Small-en-v1.5` (Candle BERT)**:
+  - 384-dimensional BERT embeddings with local safetensors auto-detection and fallback.
+
+#### 2. AST Call Graph & Dependency Extraction (`oxide-parser`)
+- **Bidirectional Call & Import Extraction**:
+  - `LanguageExtractor::extract_call_edges()` and `LanguageExtractor::extract_import_edges()`.
+  - Comprehensive AST parsing across Rust, TypeScript, Python, C, and C++.
+  - Extraction of function calls, method calls, macro invocations, and module imports.
+- **New CLI Commands**:
+  - `oxide-embed callers <symbol>`: Query inbound callers of any symbol in the workspace.
+  - `oxide-embed callees <symbol>`: Query outbound functions/methods invoked by a target.
+  - `oxide-embed impact <symbol>`: Compute blast radius showing upstream code that would break if a symbol changes.
+  - `oxide-embed tokenmap`: Tree-based token density mapping with folder-by-folder breakdowns and percentage weights.
+  - `oxide-embed install-hook`: Automatically configures hooks for Claude Code, Antigravity, and Cursor.
+
+#### 3. Canonical DB Resolution & Robust File Watcher (`oxide-core` & `oxide-cli`)
+- **Canonical Storage Path Resolution (`resolve_db_path`)**:
+  - Automatically resolves `.oxide/project.db` (SurrealKV) with backward-compatibility fallbacks.
+  - Fixes database lock conflicts and ensures unified storage between CLI and daemon watcher.
+- **Live Debounced Watcher Daemon (`WorkspaceWatcher`)**:
+  - Real-time file system monitoring with debounced incremental re-indexing of AST symbols, call edges, and doc references.
+
+#### 4. Multi-Distro Linux Packaging & Automated Installation
 - **Universal Installer Script (`scripts/install.sh`)**: Architecture detection (x86_64, aarch64), automated binary placement in `/usr/local/bin` or `~/.local/bin`, shell completion setup, and optional systemd user service activation.
-- **Native Debian Package Builder (`scripts/package-deb.sh`)**: Produces stripped, dependency-resolved `dist/oxide-embed_0.2.0_amd64.deb` using `dpkg-deb` with full control metadata, pre/post installation triggers, and copyright notices.
-- **Arch Linux Package (`packaging/arch/PKGBUILD`)**: Native `makepkg` recipe compiling with release optimizations and systemd user unit deployment.
+- **Native Debian Package Builder (`scripts/package-deb.sh`)**: Produces stripped, dependency-resolved `dist/oxide-embed_0.2.0_amd64.deb` using `dpkg-deb`.
+- **Arch Linux Package (`packaging/arch/PKGBUILD`)**: Native `makepkg` recipe compiling with release optimizations.
 - **Fedora / RHEL RPM Specification (`packaging/fedora/oxide-embed.spec`)**: Standard RPM build spec with systemd-rpm-macros.
 - **Alpine Linux Recipe (`packaging/alpine/APKBUILD`)**: Musl libc package recipe for ultra-lightweight containers.
-- **Systemd User Service (`packaging/systemd/oxide-watch.service`)**: Background daemon unit managing continuous file watching and incremental AST re-indexing.
-- **Master Release Builder (`scripts/build-dist.sh`)**: Orchestrates compilation, Debian packaging, portable tarball packaging, and `SHA256SUMS` generation.
+- **Systemd User Service (`packaging/systemd/oxide-watch.service`)**: Background daemon unit managing continuous file watching.
 
-#### 2. Real Criterion Benchmark Suite & Performance Scorecards
+#### 5. Real Criterion Benchmark Suite & Performance Scorecards
 - **19 Benchmark Suites Across All 5 Crates (`benches/`)**:
-  - `core_id_and_hashing`: UUIDv7 generation (1.51 µs), Blake3/SHA256 path hashing (325.58 ns).
-  - `core_context_hygiene`: Read guard cache lookup (4.19 µs), error condenser (45.73 µs).
-  - `core_ledger_and_memify`: Token ledger calculation (1.62 µs), Ebbinghaus memory decay (4.64 ns).
-  - `parser_ast_extraction`: Tree-sitter Rust (46.82 µs), TypeScript (41.78 µs), Python (31.06 µs).
-  - `parser_outline_and_chunking`: Outline extraction (321.37 ns), symbol chunking (6.43 µs).
-  - `parser_doc_and_anatomy`: Doc anatomy (412.66 ns), doc-to-symbol linking (598.55 ns).
-  - `ml_candle_embedder`: 384d SIMD projection (638.41 ns), cosine similarity (611.66 ns), K-Means (752.35 µs).
-  - `db_surreal_operations`: Hybrid BM25/Vector search (149.06 µs), 2-Hop GraphRAG traversal (530.43 µs).
+  - UUIDv7 generation (1.51 µs), Blake3/SHA256 path hashing (325.58 ns).
+  - Read guard cache lookup (4.19 µs), error condenser (45.73 µs).
+  - Token ledger calculation (1.62 µs), Ebbinghaus memory decay (4.64 ns).
+  - Tree-sitter Rust (46.82 µs), TypeScript (41.78 µs), Python (31.06 µs).
+  - Hybrid BM25/Vector search (149.06 µs), 2-Hop GraphRAG traversal (530.43 µs).
 - **Benchmark Documentation (`docs/BENCHMARKS.md`)**: Full report with confidence intervals and direct comparisons against Cognee, OpenWolf, and Tokenix.
 
-#### 3. Token Budgeting & Context Synthesis (`oxide-core`)
-- **Knapsack Token-Budget Packer (`TokenBudgetPacker`)**: Greedy scoring and knapsack packing engine that fits highest-value AST symbols, subgraphs, and rules within exact token ceilings (`--budget <N>`).
-- **Token Estimator (`TokenEstimator`)**: Sub-millisecond deterministic token estimation heuristic for code and markdown.
-- **Task Context Synthesizer (`ContextSynthesizer`)**: Multi-source context engine synthesizing active `.oxide/STATUS.md` state, `.oxide/docs/CEREBRUM.md` architectural constraints, and 2-hop GraphRAG symbol subgraphs into a clean LLM prompt block.
-
-#### 4. Surgical AST Slicing (`oxide-parser`)
-- **Symbol Slicer (`SymbolSlicer`)**: Byte-range surgical slice extractor that retrieves only the exact function/struct implementation lines, signature, and docstring directly from source without loading entire files.
-- CLI Integration: `oxide-embed read <path> --symbol <name>`.
-
-#### 5. Native Model Context Protocol (MCP) Server (`oxide-cli`)
-- **Stdio MCP Server (`McpServer`)**: Full JSON-RPC 2.0 stdio implementation exposing 11 specialized tools:
-  - `oxide_index_workspace`, `oxide_search_hybrid`, `oxide_query_graph`, `oxide_extract_ast`, `oxide_get_outline`, `oxide_link_docs`, `oxide_read_guard`, `oxide_condense_errors`, `oxide_token_ledger`, `oxide_check_drift`, `oxide_mcp_status`.
-- **MCP Client Guide (`docs/MCP_GUIDE.md`)**: Complete setup configurations for Google Antigravity, Claude Code, Cursor, and Roo Code.
-
-#### 6. Live Debounced File Watcher (`oxide-cli`)
-- **Workspace Watcher (`WorkspaceWatcher`)**: Real-time daemon based on `notify` that monitors code and markdown changes with a 300ms debounce window and incrementally updates SurrealDB symbol and chunk records in <5ms.
-- Command: `oxide-embed watch`.
-
-#### 7. Visual Assets & Documentation
-- `docs/assets/oxide_architecture_overview.jpg` & `assets/oxide_architecture_overview.jpg`: Comprehensive architectural diagram.
-- `docs/assets/oxide_cli_graphrag_demo.jpg` & `assets/oxide_cli_graphrag_demo.jpg`: Live CLI terminal and GraphRAG demo banner.
-- Upgraded `README.md`, `docs/ARCHITECTURE.md`, `docs/INSTALL.md`, `docs/BENCHMARKS.md`, and `docs/MCP_GUIDE.md`.
+#### 6. Dual Licensing (MIT OR Apache-2.0)
+- Added `LICENSE-MIT`, `LICENSE-APACHE`, and updated root `Cargo.toml`.
 
 ---
 
 ## [0.1.0] - 2026-09-17
 
 ### Added
-- Core architecture (`oxide-core`): `SessionReadGuard`, `TerminalCondenser`, `HandoffCheckpoint`, `TokenLedger`, `MemifyEngine`.
-- Tree-sitter AST extractors and Markdown DocLinker (`oxide-parser`).
-- Pure Rust Candle embedder with offline deterministic projection fallback and K-Means clustering (`oxide-ml`).
-- SurrealDB 3.x embedded SurrealKV store with SCHEMAFULL relations and GraphRAG multi-hop traversal (`oxide-db`).
-- Unified CLI interface (`oxide-cli`): `init`, `index`, `cognify`, `search`, `explain`, `run`, `read`, `handoff`, `report`, `memify`, `consolidate`.
-- 21 automated unit and integration tests and 4 Criterion benchmark suites.
+- Initial workspace architecture (`oxide-core`, `oxide-db`, `oxide-parser`, `oxide-ml`, `oxide-cli`).
+- Embedded SurrealDB integration with in-memory and SurrealKV datastores.
+- Tree-sitter AST extraction and chunking.
+- Model Context Protocol (MCP) server foundation over stdio.

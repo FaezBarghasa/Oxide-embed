@@ -4,7 +4,17 @@ Oxide-embed implements a high-performance **Model Context Protocol (MCP)** serve
 
 ---
 
-## 1. Client Configuration
+## 1. Quick Automated Hook Installation
+
+You can automatically configure your AI agent (Claude Code, Google Antigravity, Cursor) with a single command:
+
+```bash
+oxide-embed install-hook
+```
+
+---
+
+## 2. Manual Client Configuration
 
 ### A. Google Antigravity / Gemini CLI (`mcp_config.json`)
 
@@ -15,7 +25,7 @@ Add the following to `~/.gemini/antigravity-ide/mcp/oxide-embed/config.json` or 
   "mcpServers": {
     "oxide-embed": {
       "command": "oxide-embed",
-      "args": ["mcp-serve"],
+      "args": ["mcp"],
       "env": {
         "RUST_LOG": "info"
       }
@@ -27,7 +37,7 @@ Add the following to `~/.gemini/antigravity-ide/mcp/oxide-embed/config.json` or 
 ### B. Claude Code (`~/.claude.json` or `claude mcp add`)
 
 ```bash
-claude mcp add oxide-embed -- oxide-embed mcp-serve
+claude mcp add oxide-embed -- oxide-embed mcp
 ```
 
 Or configure manually in `claude_desktop_config.json`:
@@ -36,7 +46,7 @@ Or configure manually in `claude_desktop_config.json`:
   "mcpServers": {
     "oxide-embed": {
       "command": "/usr/local/bin/oxide-embed",
-      "args": ["mcp-serve"]
+      "args": ["mcp"]
     }
   }
 }
@@ -49,7 +59,7 @@ Or configure manually in `claude_desktop_config.json`:
   "servers": {
     "oxide-embed": {
       "command": "oxide-embed",
-      "args": ["mcp-serve"]
+      "args": ["mcp"]
     }
   }
 }
@@ -57,14 +67,14 @@ Or configure manually in `claude_desktop_config.json`:
 
 ---
 
-## 2. Available MCP Tools
+## 3. Available MCP Tools
 
 Oxide-embed exposes **11 specialized tools** for AI coding assistants:
 
 | Tool Name | Description | Key Arguments |
 | :--- | :--- | :--- |
 | `oxide_index_workspace` | Incremental AST and vector indexing of codebase | `path` (string), `force` (bool) |
-| `oxide_search_hybrid` | Combined BM25 lexical & 384d vector semantic search | `query` (string), `limit` (int) |
+| `oxide_search_hybrid` | Combined BM25 lexical & vector semantic search | `query` (string), `limit` (int) |
 | `oxide_query_graph` | Multi-hop GraphRAG symbol traversal (callers, callees) | `symbol` (string), `depth` (int) |
 | `oxide_extract_ast` | Tree-sitter symbol outline and AST anatomy | `file_path` (string) |
 | `oxide_get_outline` | High-level symbol hierarchy (classes, functions, traits) | `file_path` (string) |
@@ -77,7 +87,7 @@ Oxide-embed exposes **11 specialized tools** for AI coding assistants:
 
 ---
 
-## 3. Tool Usage Examples
+## 4. Tool Usage Examples
 
 ### Example 1: Multi-hop GraphRAG Query
 Requesting callers and structural dependencies for a struct or function:
@@ -101,4 +111,3 @@ Requesting callers and structural dependencies for a struct or function:
   }
 }
 ```
-**Result**: Strips duplicate paths, normalizes ANSI escape codes, and extracts core compiler diagnostics into a dense token format.

@@ -12,7 +12,10 @@ pub async fn handle_impact(project_root: &Path, symbol: &str) -> Result<()> {
 
     match subgraph {
         Some(ctx) => {
-            println!("💥 Blast Radius & Impact Graph for `{}` ({}):", ctx.target_symbol, ctx.symbol_kind);
+            println!(
+                "💥 Blast Radius & Impact Graph for `{}` ({}):",
+                ctx.target_symbol, ctx.symbol_kind
+            );
             println!("  📁 File: {}", ctx.file_path);
             if let Some(sig) = &ctx.signature {
                 println!("  📝 Signature: {}", sig);
@@ -45,6 +48,9 @@ pub async fn handle_impact(project_root: &Path, symbol: &str) -> Result<()> {
 
             Ok(())
         }
-        None => Err(OxideError::NotFound(format!("Symbol '{}' not found in knowledge graph", symbol))),
+        None => Err(OxideError::NotFound(format!(
+            "Symbol '{}' not found in knowledge graph",
+            symbol
+        ))),
     }
 }

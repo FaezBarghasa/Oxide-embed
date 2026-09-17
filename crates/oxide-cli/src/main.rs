@@ -6,7 +6,7 @@ mod watcher;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_callers, handle_callees, handle_consolidate, handle_context, handle_doctor,
+    handle_callees, handle_callers, handle_consolidate, handle_context, handle_doctor,
     handle_explain, handle_export, handle_handoff, handle_impact, handle_import, handle_index,
     handle_init, handle_install_hook, handle_memify, handle_outline, handle_read, handle_report,
     handle_run, handle_search, handle_tokenmap,

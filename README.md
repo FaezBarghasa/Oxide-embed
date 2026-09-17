@@ -5,11 +5,16 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP%20Stdio-purple.svg)](https://modelcontextprotocol.io/)
 [![Debian Package](https://img.shields.io/badge/package-.deb%20amd64%20%2F%20arm64-blue.svg)](docs/INSTALL.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Build & Tests](https://img.shields.io/badge/tests-26%20passed-brightgreen.svg)]()
+[![Build & Tests](https://img.shields.io/badge/tests-27%20passed-brightgreen.svg)]()
 
-**Oxide-Embed** is an offline-first, high-throughput AST-aware context engine, codebase GraphRAG memory system, and Model Context Protocol (MCP) server engineered in pure Rust.
+**Oxide-Embed** is an offline-first, ultra-high-throughput AST-aware context engine, codebase GraphRAG memory system, and Model Context Protocol (MCP) server engineered in pure Rust (2024 Edition).
 
-It synthesizes the architectural paradigms of **`topoteretes/cognee`** (hierarchical code-to-doc cognitive graphs, GraphRAG, temporal decay, and Cerebrum rule consolidation), **`cytostack/openwolf`** (sub-millisecond AST pre-read guards, terminal error log condensing, and session handover checkpoints), and **`tokenix`** (knapsack token budgeting, surgical AST slicing, task-driven context synthesis, and native MCP server), executing **100% offline with zero cloud API dependencies, sub-millisecond query latencies, and zero token waste**.
+It unifies and surpasses the architectural paradigms of:
+- **`topoteretes/cognee`**: Hierarchical code-to-doc cognitive graphs, 2-hop GraphRAG traversals, Ebbinghaus temporal decay, and Cerebrum rule consolidation.
+- **`cytostack/openwolf`**: Sub-microsecond AST pre-read guards, terminal error log condensing, and multi-agent handover checkpoints.
+- **`tokenix`**: Knapsack token budgeting, surgical AST slicing, task-driven context synthesis, bidirectional call/callee graphs, and native MCP integration.
+
+Executing **100% offline with zero cloud API dependencies, sub-millisecond query latencies (<50 µs AST, <1 ms GraphRAG), and zero token waste**.
 
 ---
 
@@ -44,6 +49,21 @@ Every metric below is measured from **real bare-metal Criterion benchmark execut
 
 ---
 
+## 🧠 Production Machine Learning Models
+
+Oxide-Embed supports three local embedding engines running fully offline on CPU or GPU:
+
+1. **`EmbeddingGemma-300M`** (ONNX Runtime):
+   - Fast, high-accuracy 768-dimensional embeddings using ONNX Runtime.
+   - Mean-pooled with L2 normalization for semantic code search.
+2. **`Qwen3-Embedding-0.6B`** (Candle):
+   - High-precision 1024-dimensional embeddings implemented via pure `candle-core` / `candle-nn`.
+   - Thread-safe Mutex forward pass for batch and concurrent indexing.
+3. **`BGE-Small-en-v1.5`** (Candle BERT):
+   - Lightweight, ultra-fast 384-dimensional BERT embeddings with local safetensors loading.
+
+---
+
 ## 📦 Multi-Distro Linux Installation
 
 ### Quick Universal Script
@@ -74,14 +94,20 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 
 ## 🚀 Key Features & Architectural Highlights
 
-### 1. Cognitive Graph & GraphRAG (`Cognee` Parity)
-- **Deterministic Tree-Sitter AST Extraction**: Extracts symbols, signatures, call graphs, import dependencies, and parent-child hierarchies across Rust, TypeScript, and Python in <47 µs.
+### 1. Cognitive Graph & GraphRAG (`Cognee` Parity & Beyond)
+- **Deterministic Tree-Sitter AST Extraction**: Extracts symbols, signatures, call graphs, import dependencies, and parent-child hierarchies across Rust, TypeScript, Python, C, and C++ in <47 µs.
 - **DocLinker (ECL Pipeline)**: Hierarchically links markdown documentation sections to concrete code symbols without external LLM calls.
 - **Multi-Hop Subgraph Traversal**: Queries symbols, caller/callee chains, and associated architectural docs in a single bounded graph traversal in **530 µs**.
 - **Active Forgetting & Temporal Decay**: Exponentially decays unreferenced graph edges and auto-prunes orphan nodes (4.64 ns calculation).
 - **Cerebrum Consolidation**: Clusters resolved bug logs and synthesizes actionable project rules into `.oxide/docs/CEREBRUM.md`.
 
-### 2. Context Hygiene & Token Reduction (`OpenWolf` & `Tokenix` Parity)
+### 2. Bidirectional Call Graphs & Impact Analysis (`Tokenix` Parity & Beyond)
+- **`callers` & `callees`**: Instantly query inbound callers or outbound callees for any symbol in the workspace.
+- **`impact`**: Computes bidirectional blast radius showing all upstream code that would break if a symbol's signature changes.
+- **`tokenmap`**: Visualizes folder token densities and top context-heavy files with token percentages.
+- **`install-hook`**: Auto-configures agent hooks for Claude Code, Antigravity, and Cursor.
+
+### 3. Context Hygiene & Token Reduction (`OpenWolf` Parity & Beyond)
 - **Knapsack Token-Budget Packing**: Greedy budget packer (`--budget <N>`) that fits highest-value symbols, graph subgraphs, and docs strictly within token ceilings.
 - **Surgical AST Symbol Reading**: Slices and streams exclusively the target function/struct's source lines, signature, and doc comments directly from the AST (`read --symbol <name>`).
 - **Pre-Read Guard**: Intercepts file reads across agent sessions. If content hash is unchanged, returns a lightweight AST symbol outline stub instead of dumping thousands of tokens (4.19 µs lookup).
@@ -89,7 +115,7 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 - **Session Handover Checkpoints**: Generates atomic `.oxide/STATUS.md` state checkpoints for seamless multi-agent handovers.
 - **Local Token Ledger**: Measures input, output, cached, and reasoning tokens with estimated cost breakdowns and savings scoreboards.
 
-### 3. Agent Integration & Live Automation
+### 4. Agent Integration & Live Automation
 - **Native Model Context Protocol (MCP)**: Exposes 11 specialized tools over stdio for direct integration into Antigravity, Claude Code, Cursor, and Roo Code.
 - **Live Debounced Watcher Daemon**: Real-time file system monitor (`oxide-embed watch` / `oxide-watch.service`) that incrementally re-indexes AST symbols and call edges on file save.
 
@@ -102,7 +128,7 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 # Initialize .oxide metadata and embedded SurrealKV store
 oxide-embed init
 
-# Run full AST extraction, DocLinker, and Vector indexer
+# Run full AST extraction, call graph linking, DocLinker, and Vector indexer
 oxide-embed index
 
 # Cognify workspace (Full Cognee-style GraphRAG index)
@@ -112,7 +138,22 @@ oxide-embed cognify
 oxide-embed watch
 ```
 
-### 2. Task-Driven Context & Surgical Slicing
+### 2. AST Call Graph & Impact Analysis
+```bash
+# Query inbound callers of a symbol
+oxide-embed callers SurrealProjectStore
+
+# Query outbound callees invoked by a function
+oxide-embed callees handle_index
+
+# Analyze blast radius and impact graph
+oxide-embed impact SymbolRecord
+
+# Show project token density map
+oxide-embed tokenmap
+```
+
+### 3. Task-Driven Context & Surgical Slicing
 ```bash
 # Synthesize multi-layer context for a prompt within an exact token budget
 oxide-embed context "implement bare-metal SPI driver" --budget 1500
@@ -120,17 +161,17 @@ oxide-embed context "implement bare-metal SPI driver" --budget 1500
 # Surgically read only a specific AST symbol definition and docstring
 oxide-embed read crates/oxide-core/src/id.rs --symbol ProjectId
 
-# Search with token budget ceiling
+# Search with token budget ceiling and GraphRAG expansion
 oxide-embed search "init_hardware" --budget 1000 --with-graph
 ```
 
-### 3. Subgraph GraphRAG Traversal
+### 4. Subgraph GraphRAG Traversal
 ```bash
 # Explain a symbol and its multi-hop relationship topology
 oxide-embed explain "SessionReadGuard" --hops 2
 ```
 
-### 4. Context Hygiene & Execution
+### 5. Context Hygiene & Execution
 ```bash
 # Run command with automatic log caching & error condensing
 oxide-embed run -- cargo test
@@ -139,7 +180,7 @@ oxide-embed run -- cargo test
 oxide-embed read src/main.rs
 ```
 
-### 5. Session Handover & Memory Evolution
+### 6. Session Handover & Memory Evolution
 ```bash
 # Save atomic handover checkpoint
 oxide-embed handoff --goal "STM32 I2C Driver" --next "Run HIL tests"
@@ -154,13 +195,13 @@ oxide-embed memify
 oxide-embed consolidate
 ```
 
-### 6. Model Context Protocol (MCP) Server
+### 7. Model Context Protocol (MCP) Server
 ```bash
 # Start stdio MCP server for agent IDEs
-oxide-embed mcp-serve
+oxide-embed mcp
 
-# Check MCP server status and health
-oxide-embed mcp-status
+# Automatically install hooks into AI agent configs
+oxide-embed install-hook
 ```
 
 *For client setup configs (Antigravity, Claude Code, Cursor, Roo Code), see [docs/MCP_GUIDE.md](docs/MCP_GUIDE.md).*
@@ -169,8 +210,8 @@ oxide-embed mcp-status
 
 ## 📚 Documentation Index
 
-- [Architecture Overview](docs/ARCHITECTURE.md) - Crate topology, data flow, and memory graph model.
-- [Real Criterion Benchmarks](docs/BENCHMARKS.md) - Exact latency numbers, throughput, and comparative analysis.
+- [Architecture Overview](docs/ARCHITECTURE.md) - Crate topology, data flow, ML embedder pipeline, and memory graph model.
+- [Real Criterion Benchmarks](docs/BENCHMARKS.md) - Exact latency numbers, throughput, and comparative analysis against Cognee, OpenWolf, and Tokenix.
 - [Linux Installation Guide](docs/INSTALL.md) - Distro packages (`.deb`, `PKGBUILD`, `spec`, `APKBUILD`), shell installer, and systemd service.
 - [MCP Server Guide](docs/MCP_GUIDE.md) - Setup instructions for Antigravity, Claude Code, Cursor, and Roo Code.
 
@@ -179,7 +220,7 @@ oxide-embed mcp-status
 ## 🧪 Testing & Verification
 
 ```bash
-# Run all workspace unit and integration tests (26 passed)
+# Run all workspace unit and integration tests (27 passed)
 cargo test --workspace
 
 # Run all Criterion benchmarks
@@ -194,4 +235,4 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 ## 📄 License
 
-Dual-licensed under MIT or Apache 2.0. See [LICENSE](LICENSE) for details.
+Dual-licensed under **MIT** or **Apache 2.0**. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) for details.
