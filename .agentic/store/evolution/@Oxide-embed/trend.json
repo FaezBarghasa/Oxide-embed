@@ -1,0 +1,11 @@
+{
+  "key": "trend",
+  "data": {
+    "results": [],
+    "evolveCount": 0,
+    "windowSize": 30,
+    "lastEvolveSession": null,
+    "cumulativeResults": 0
+  },
+  "updatedAt": "2026-09-17T06:58:36.475Z"
+}

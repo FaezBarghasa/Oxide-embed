@@ -1,7 +1,7 @@
 {
-  "cachedAt": "2026-09-16T12:19:52.437Z",
+  "cachedAt": "2026-09-17T06:58:18.011Z",
   "configSnapshots": {
-    "Cargo.toml": 1789560944602.2798
+    "Cargo.toml": 1789626943443.8853
   },
   "context": {
     "languages": [
@@ -16,11 +16,10 @@
     "frameworks": [],
     "packageManager": "cargo",
     "testPatterns": [
+      "tests/",
       "cargo-test"
     ],
-    "entryPoints": [
-      "src/main.rs"
-    ],
+    "entryPoints": [],
     "ambiguity": "LOW"
   }
 }
