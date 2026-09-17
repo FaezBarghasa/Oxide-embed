@@ -175,6 +175,46 @@ impl McpServer {
                                 },
                                 "required": ["command", "raw_output"]
                             }
+                        },
+                        {
+                            "name": "oxide_remember",
+                            "description": "Store a typed semantic memory (instruction, decision, preference, fact, goal, learning, etc.) in the project's long-term memory.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "content": { "type": "string", "description": "Memory text or assertion to remember" },
+                                    "kind": { "type": "string", "description": "Category: instruction, fact, decision, goal, commitment, preference, relationship, context, event, learning, observation, artifact, error" },
+                                    "title": { "type": "string", "description": "Optional descriptive title" },
+                                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tags" },
+                                    "symbol_ref": { "type": "string", "description": "Target symbol governed or referenced by this memory" },
+                                    "auto_resolve": { "type": "boolean", "description": "Automatically supersede prior conflicting memories" }
+                                },
+                                "required": ["content"]
+                            }
+                        },
+                        {
+                            "name": "oxide_recall",
+                            "description": "Recall typed semantic memories with category, vector similarity, and temporal point-in-time filters.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "query": { "type": "string", "description": "Topic, question, or search text" },
+                                    "kind": { "type": "string", "description": "Optional category filter" },
+                                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tag filter" },
+                                    "as_of": { "type": "string", "description": "Optional RFC3339 point-in-time timestamp" },
+                                    "budget": { "type": "integer", "description": "Token budget ceiling" },
+                                    "limit": { "type": "integer", "description": "Max results (default 5)" }
+                                },
+                                "required": ["query"]
+                            }
+                        },
+                        {
+                            "name": "oxide_get_rules",
+                            "description": "Returns active consolidated architectural constraints, decisions, and instructions governing the codebase.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {}
+                            }
                         }
                     ]
                 })),
@@ -459,6 +499,139 @@ impl McpServer {
                     condensed.condensed_bytes,
                     saved_pct
                 ))
+            }
+
+            "oxide_remember" => {
+                let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                let kind_str = args.get("kind").and_then(|v| v.as_str());
+                let title = args.get("title").and_then(|v| v.as_str());
+                let symbol_ref = args.get("symbol_ref").and_then(|v| v.as_str());
+                let auto_resolve = args
+                    .get("auto_resolve")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+
+                let tags: Vec<String> = args
+                    .get("tags")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                crate::commands::handle_remember(
+                    &self.workspace_dir,
+                    content,
+                    kind_str,
+                    title,
+                    &tags,
+                    symbol_ref,
+                    auto_resolve,
+                )
+                .await?;
+
+                Ok(format!(
+                    "Successfully remembered: \"{}\"",
+                    title.unwrap_or(content)
+                ))
+            }
+
+            "oxide_recall" => {
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                let kind_str = args.get("kind").and_then(|v| v.as_str());
+                let as_of_str = args.get("as_of").and_then(|v| v.as_str());
+                let budget = args
+                    .get("budget")
+                    .and_then(|v| v.as_u64())
+                    .map(|b| b as usize);
+                let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(5) as usize;
+
+                let tags: Vec<String> = args
+                    .get("tags")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                if let Some(st) = store {
+                    let kind_opt = match kind_str {
+                        Some(k) => Some(k.parse::<oxide_core::MemoryKind>()?),
+                        None => None,
+                    };
+                    let as_of_opt = match as_of_str {
+                        Some(s) => chrono::DateTime::parse_from_rfc3339(s)
+                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                            .ok(),
+                        None => None,
+                    };
+
+                    let embedder = CandleBertEmbedder::new_offline();
+                    let query_emb = embedder.embed(query).await.ok();
+
+                    let memories = st
+                        .recall_memories(query_emb.as_deref(), kind_opt, &tags, as_of_opt, limit)
+                        .await?;
+
+                    let mut out = String::new();
+                    let mut total_tokens = 0;
+                    for m in memories {
+                        let block = format!(
+                            "[{}] {} ({})\n   {}\n",
+                            m.kind.as_str().to_uppercase(),
+                            m.title,
+                            m.created_at.format("%Y-%m-%d %H:%M"),
+                            m.content
+                        );
+                        let cost = oxide_core::budget::TokenEstimator::estimate_tokens(&block);
+                        if let Some(b) = budget
+                            && total_tokens + cost > b
+                        {
+                            break;
+                        }
+                        total_tokens += cost;
+                        out.push_str(&block);
+                        out.push('\n');
+                    }
+
+                    if out.is_empty() {
+                        Ok("No matching memories found.".into())
+                    } else {
+                        Ok(out)
+                    }
+                } else {
+                    Err(OxideError::Config("Oxide database not found.".into()))
+                }
+            }
+
+            "oxide_get_rules" => {
+                if let Some(st) = store {
+                    let rules = st.list_active_rules().await?;
+                    if rules.is_empty() {
+                        Ok("No active rules found.".into())
+                    } else {
+                        let mut out = format!(
+                            "📜 Active Architectural Rules & Decisions (Total: {})\n\n",
+                            rules.len()
+                        );
+                        for r in rules {
+                            out.push_str(&format!(
+                                "- [{}] **{}** ({})\n  {}\n",
+                                r.kind.as_str().to_uppercase(),
+                                r.title,
+                                r.id,
+                                r.content
+                            ));
+                        }
+                        Ok(out)
+                    }
+                } else {
+                    Err(OxideError::Config("Oxide database not found.".into()))
+                }
             }
 
             _ => Err(OxideError::Config(format!("Unknown tool: {}", tool_name))),

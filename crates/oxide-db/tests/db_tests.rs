@@ -218,11 +218,7 @@ async fn test_typed_semantic_memory_crud_and_recall() {
     // 6. Conflict detection
     let conflicting_emb = vec![0.79f32; 384];
     let conflicts = store
-        .find_conflicts(
-            oxide_core::MemoryKind::Decision,
-            &conflicting_emb,
-            0.75,
-        )
+        .find_conflicts(oxide_core::MemoryKind::Decision, &conflicting_emb, 0.75)
         .await
         .expect("find conflicts");
     assert_eq!(conflicts.len(), 1);

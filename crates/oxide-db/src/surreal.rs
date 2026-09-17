@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{
-    ChunkRecord, FileRecord, MemoryId, MemoryKind, MemoryRecord, MemoryStatus, ProjectId,
-    SymbolId, SymbolRecord,
+    ChunkRecord, FileRecord, MemoryId, MemoryKind, MemoryRecord, MemoryStatus, ProjectId, SymbolId,
+    SymbolRecord,
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -74,7 +74,7 @@ struct MemoryRow {
 }
 
 impl MemoryRow {
-    fn to_memory_record(self) -> Result<MemoryRecord> {
+    fn into_memory_record(self) -> Result<MemoryRecord> {
         let raw_id = match &self.id {
             serde_json::Value::String(s) => s.clone(),
             serde_json::Value::Object(map) => map
@@ -86,8 +86,7 @@ impl MemoryRow {
         };
         let clean_id = raw_id
             .replace("memory_record:", "")
-            .replace('`', "")
-            .replace('"', "")
+            .replace(['`', '"'], "")
             .trim()
             .to_string();
 
@@ -396,7 +395,7 @@ impl ProjectStore for SurrealProjectStore {
             .map_err(|e| OxideError::Database(e.to_string()))?;
         let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
         if let Some(row) = rows.into_iter().next() {
-            Ok(Some(row.to_memory_record()?))
+            Ok(Some(row.into_memory_record()?))
         } else {
             Ok(None)
         }
@@ -451,7 +450,7 @@ impl ProjectStore for SurrealProjectStore {
         let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
         let mut records = Vec::new();
         for r in rows {
-            let rec = r.to_memory_record()?;
+            let rec = r.into_memory_record()?;
             if tags.is_empty() || tags.iter().any(|t| rec.tags.contains(t)) {
                 records.push(rec);
             }
@@ -478,7 +477,7 @@ impl ProjectStore for SurrealProjectStore {
         let mut conflicts = Vec::new();
         for r in rows {
             if r.score.unwrap_or(0.0) >= threshold {
-                conflicts.push(r.mem.to_memory_record()?);
+                conflicts.push(r.mem.into_memory_record()?);
             }
         }
         Ok(conflicts)
@@ -492,7 +491,7 @@ impl ProjectStore for SurrealProjectStore {
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
         let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
-        rows.into_iter().map(|r| r.to_memory_record()).collect()
+        rows.into_iter().map(|r| r.into_memory_record()).collect()
     }
 
     async fn link_memory_to_symbol(

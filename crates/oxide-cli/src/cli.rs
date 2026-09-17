@@ -201,6 +201,61 @@ pub enum Commands {
     },
 
     #[command(
+        about = "Remember a typed semantic memory (instruction, decision, preference, fact, learning, etc.)"
+    )]
+    Remember {
+        #[arg(help = "Memory content to store")]
+        content: String,
+
+        #[arg(
+            short,
+            long,
+            help = "Category: instruction, fact, decision, goal, commitment, preference, relationship, context, event, learning, observation, artifact, error"
+        )]
+        kind: Option<String>,
+
+        #[arg(short, long, help = "Optional title")]
+        title: Option<String>,
+
+        #[arg(short, long, value_delimiter = ',', help = "Comma-separated tags")]
+        tags: Vec<String>,
+
+        #[arg(long, help = "Symbol or function governed by this memory")]
+        symbol: Option<String>,
+
+        #[arg(long, help = "Automatically supersede older conflicting memory")]
+        auto_resolve: bool,
+    },
+
+    #[command(about = "Recall typed semantic memories with category and temporal filters")]
+    Recall {
+        #[arg(help = "Search query or topic")]
+        query: String,
+
+        #[arg(
+            short,
+            long,
+            help = "Category filter: instruction, fact, decision, goal, commitment, preference, relationship, context, event, learning, observation, artifact, error"
+        )]
+        kind: Option<String>,
+
+        #[arg(short, long, value_delimiter = ',', help = "Filter by tags")]
+        tags: Vec<String>,
+
+        #[arg(long, help = "Point-in-time timestamp (RFC3339)")]
+        as_of: Option<String>,
+
+        #[arg(short, long, help = "Token budget ceiling")]
+        budget: Option<usize>,
+
+        #[arg(short, long, default_value = "5", help = "Max results")]
+        limit: usize,
+    },
+
+    #[command(about = "Review active contradictions and conflicts across rules and decisions")]
+    Conflicts,
+
+    #[command(
         about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration",
         alias = "mcp-serve",
         alias = "serve"

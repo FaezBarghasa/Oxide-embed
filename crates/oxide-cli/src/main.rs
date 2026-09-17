@@ -6,10 +6,10 @@ mod watcher;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_callees, handle_callers, handle_consolidate, handle_context, handle_doctor,
-    handle_explain, handle_export, handle_handoff, handle_impact, handle_import, handle_index,
-    handle_init, handle_install_hook, handle_memify, handle_outline, handle_read, handle_report,
-    handle_run, handle_search, handle_tokenmap,
+    handle_callees, handle_callers, handle_conflicts, handle_consolidate, handle_context,
+    handle_doctor, handle_explain, handle_export, handle_handoff, handle_impact, handle_import,
+    handle_index, handle_init, handle_install_hook, handle_memify, handle_outline, handle_read,
+    handle_recall, handle_remember, handle_report, handle_run, handle_search, handle_tokenmap,
 };
 use mcp::McpServer;
 use std::env;
@@ -57,7 +57,45 @@ async fn main() -> ExitCode {
             decay_days,
             prune_threshold,
         } => handle_memify(project_root, decay_days, prune_threshold).await,
-        Commands::Consolidate => handle_consolidate(project_root).await,
+        Commands::Remember {
+            content,
+            kind,
+            title,
+            tags,
+            symbol,
+            auto_resolve,
+        } => {
+            handle_remember(
+                project_root,
+                &content,
+                kind.as_deref(),
+                title.as_deref(),
+                &tags,
+                symbol.as_deref(),
+                auto_resolve,
+            )
+            .await
+        }
+        Commands::Recall {
+            query,
+            kind,
+            tags,
+            as_of,
+            budget,
+            limit,
+        } => {
+            handle_recall(
+                project_root,
+                &query,
+                kind.as_deref(),
+                &tags,
+                as_of.as_deref(),
+                budget,
+                limit,
+            )
+            .await
+        }
+        Commands::Conflicts => handle_conflicts(project_root).await,
         Commands::Mcp => {
             let server = McpServer::new(project_root);
             server.run_stdio().await
@@ -66,6 +104,7 @@ async fn main() -> ExitCode {
             let watcher = WorkspaceWatcher::new(project_root);
             watcher.run().await
         }
+        Commands::Consolidate => handle_consolidate(project_root).await,
         Commands::Export { out } => handle_export(project_root, &out).await,
         Commands::Import { bundle } => handle_import(project_root, &bundle).await,
     };

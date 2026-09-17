@@ -69,10 +69,13 @@ Or configure manually in `claude_desktop_config.json`:
 
 ## 3. Available MCP Tools
 
-Oxide-embed exposes **11 specialized tools** for AI coding assistants:
+Oxide-embed exposes **14 specialized tools** for AI coding assistants:
 
 | Tool Name | Description | Key Arguments |
 | :--- | :--- | :--- |
+| `oxide_remember` | Store typed semantic memory (decision, preference, instruction) with conflict checks | `content` (string), `kind` (string), `tags` (array), `symbol_ref` (string), `auto_resolve` (bool) |
+| `oxide_recall` | Recall typed semantic memories with category, tags, and temporal filters | `query` (string), `kind` (string), `tags` (array), `as_of` (string), `budget` (int), `limit` (int) |
+| `oxide_get_rules` | Returns active consolidated architectural constraints, decisions, and instructions | None |
 | `oxide_index_workspace` | Incremental AST and vector indexing of codebase | `path` (string), `force` (bool) |
 | `oxide_search_hybrid` | Combined BM25 lexical & vector semantic search | `query` (string), `limit` (int) |
 | `oxide_query_graph` | Multi-hop GraphRAG symbol traversal (callers, callees) | `symbol` (string), `depth` (int) |
@@ -89,7 +92,32 @@ Oxide-embed exposes **11 specialized tools** for AI coding assistants:
 
 ## 4. Tool Usage Examples
 
-### Example 1: Multi-hop GraphRAG Query
+### Example 1: Remembering an Architectural Decision
+```json
+{
+  "name": "oxide_remember",
+  "arguments": {
+    "content": "Always use static bounded buffers (heapless) in STM32 bare-metal drivers",
+    "kind": "decision",
+    "tags": ["embedded", "stm32", "memory"],
+    "auto_resolve": true
+  }
+}
+```
+
+### Example 2: Recalling Active Rules with Token Budget
+```json
+{
+  "name": "oxide_recall",
+  "arguments": {
+    "query": "bare-metal STM32 driver constraints",
+    "kind": "decision",
+    "budget": 500
+  }
+}
+```
+
+### Example 3: Multi-hop GraphRAG Query
 Requesting callers and structural dependencies for a struct or function:
 ```json
 {
@@ -102,7 +130,7 @@ Requesting callers and structural dependencies for a struct or function:
 ```
 **Response Time**: ~530 µs (sub-millisecond embedded traversal).
 
-### Example 2: Compressing Compiler Output
+### Example 4: Compressing Compiler Output
 ```json
 {
   "name": "oxide_condense_errors",

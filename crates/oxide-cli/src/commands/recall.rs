@@ -36,13 +36,7 @@ pub async fn handle_recall(
     let query_emb = embedder.embed(query).await.ok();
 
     let memories = store
-        .recall_memories(
-            query_emb.as_deref(),
-            kind_opt,
-            tags,
-            as_of_opt,
-            limit,
-        )
+        .recall_memories(query_emb.as_deref(), kind_opt, tags, as_of_opt, limit)
         .await?;
 
     println!("🔍 Recalled Memories for: \"{}\"\n", query);
@@ -76,14 +70,14 @@ pub async fn handle_recall(
         );
 
         let cost = TokenEstimator::estimate_tokens(&block);
-        if let Some(b) = budget {
-            if total_tokens + cost > b {
-                println!(
-                    "\n📊 Budget ceiling reached ({} / {} tokens). Truncating output.",
-                    total_tokens, b
-                );
-                break;
-            }
+        if let Some(b) = budget
+            && total_tokens + cost > b
+        {
+            println!(
+                "\n📊 Budget ceiling reached ({} / {} tokens). Truncating output.",
+                total_tokens, b
+            );
+            break;
         }
         total_tokens += cost;
         printed += 1;
@@ -106,6 +100,9 @@ pub async fn handle_recall(
         println!();
     }
 
-    println!("📈 Displayed {} memories ({} tokens)", printed, total_tokens);
+    println!(
+        "📈 Displayed {} memories ({} tokens)",
+        printed, total_tokens
+    );
     Ok(())
 }

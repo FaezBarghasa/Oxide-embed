@@ -11,8 +11,8 @@ pub mod handoff;
 pub mod id;
 pub mod ledger;
 pub mod manifest;
-pub mod memory;
 pub mod memify;
+pub mod memory;
 pub mod read_guard;
 pub mod symbol;
 
@@ -31,7 +31,7 @@ pub use handoff::HandoffCheckpoint;
 pub use id::{ChunkId, FileId, MemoryId, ProjectId, SymbolId, WorkspaceId};
 pub use ledger::{TokenLedger, TokenSavingRecord, TokenUsageRecord};
 pub use manifest::{OxideManifest, resolve_db_path};
-pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus};
 pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
+pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus};
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
 pub use symbol::{CallEdge, ImportEdge, SymbolKind, SymbolRecord};

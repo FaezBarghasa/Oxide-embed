@@ -1,5 +1,5 @@
 use chrono::Utc;
-use oxide_core::error::{OxideError, Result};
+use oxide_core::error::Result;
 use oxide_core::id::{FileId, ProjectId, SymbolId};
 use oxide_core::manifest::OxideManifest;
 use oxide_core::memory::{ConflictDetector, MemoryKind, MemoryRecord};
@@ -18,14 +18,9 @@ pub async fn handle_remember(
     symbol_ref: Option<&str>,
     auto_resolve: bool,
 ) -> Result<()> {
-    let manifest_path = project_root.join(".oxide").join("manifest.json");
-    let manifest = OxideManifest::load(&manifest_path).unwrap_or_default();
-    let project_id = ProjectId(
-        manifest
-            .project_id
-            .clone()
-            .unwrap_or_else(uuid::Uuid::now_v7),
-    );
+    let project_id = OxideManifest::load_from_dir(project_root)
+        .map(|m| m.project_id)
+        .unwrap_or_else(|_| ProjectId::new_v7());
 
     let db_path = resolve_db_path(project_root)?;
     let store = SurrealProjectStore::open(&db_path).await?;
@@ -88,10 +83,16 @@ pub async fn handle_remember(
     if let Some(sym_name) = symbol_ref {
         let dummy_fid = FileId::from_relative_path("workspace");
         let sym_id = SymbolId::new(&dummy_fid, sym_name);
-        let _ = store.link_memory_to_symbol(&mem_id, &sym_id, "governs").await;
+        let _ = store
+            .link_memory_to_symbol(&mem_id, &sym_id, "governs")
+            .await;
     }
 
-    println!("🧠 Remembered [{}] `{}`", kind.as_str().to_uppercase(), title);
+    println!(
+        "🧠 Remembered [{}] `{}`",
+        kind.as_str().to_uppercase(),
+        title
+    );
     println!("   ID:         {}", mem_id);
     println!("   Created At: {}", Utc::now().to_rfc3339());
     if !tags.is_empty() {

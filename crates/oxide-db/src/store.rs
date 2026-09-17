@@ -41,7 +41,8 @@ pub trait ProjectStore: Send + Sync {
     async fn upsert_import_edge(&self, edge: &oxide_core::ImportEdge) -> Result<()>;
 
     // Typed Semantic Memory (Memanto parity)
-    async fn upsert_memory(&self, memory: &MemoryRecord, embedding: Option<Vec<f32>>) -> Result<()>;
+    async fn upsert_memory(&self, memory: &MemoryRecord, embedding: Option<Vec<f32>>)
+    -> Result<()>;
     async fn get_memory(&self, id: &MemoryId) -> Result<Option<MemoryRecord>>;
     async fn recall_memories(
         &self,

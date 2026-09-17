@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-09-17
+
+### Added
+
+#### 1. Typed Semantic Memory & Companion Agent Interface (`Memanto` Parity & Beyond)
+- **13 Specialized Semantic Memory Categories (`MemoryKind`)**:
+  - `Instruction`, `Fact`, `Decision`, `Goal`, `Commitment`, `Preference`, `Relationship`, `Context`, `Event`, `Learning`, `Observation`, `Artifact`, `Error`.
+- **Automated Contradiction & Conflict Resolution (`ConflictDetector`)**:
+  - Semantic vector similarity combined with lexical opposite polarity detection (`never` vs `always`, `use` vs `avoid`, `no_std` vs `with std`, etc.).
+  - Automatic superseding with `--auto-resolve` flag or interactive audit via `oxide-embed conflicts`.
+- **Temporal Point-in-Time State Querying (`--as-of`)**:
+  - Query workspace memory state as of any ISO-8601 timestamp with automatic `valid_until` boundary evaluation.
+- **Code Symbol Governance (`governs` Graph Edge)**:
+  - Graph edges connecting architectural rules and decisions directly to target AST code symbols (`SymbolRecord`).
+
+#### 2. New CLI Subcommands & Context Synthesis
+- **`oxide-embed remember <content>`**:
+  - Store typed semantic memories with `--kind`, `--tags`, `--symbol`, and `--auto-resolve`.
+- **`oxide-embed recall <query>`**:
+  - Retrieve memories matching query with `--kind`, `--tags`, `--as-of`, `--budget`, and `--limit`.
+- **`oxide-embed conflicts`**:
+  - Audit active contradictions across project instructions, decisions, and preferences.
+- **Context Synthesis Upgrade (`oxide-embed context`)**:
+  - Automatically loads and integrates active typed semantic rules into synthesized prompt context alongside Cerebrum rules and AST symbol subgraphs.
+
+#### 3. Model Context Protocol (MCP) Expansion (13 Tools)
+- Added `oxide_remember` and `oxide_recall` MCP tools for IDE-native agent memory storage and retrieval.
+
+---
+
 ## [0.2.0] - 2026-09-17
 
 ### Added
