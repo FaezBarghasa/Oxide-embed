@@ -24,7 +24,12 @@ DEFINE FIELD end_line ON symbol TYPE int;
 DEFINE FIELD signature ON symbol TYPE option<string>;
 DEFINE FIELD doc ON symbol TYPE option<string>;
 DEFINE FIELD fingerprint ON symbol TYPE string;
+DEFINE FIELD is_macro_node ON symbol TYPE bool DEFAULT false;
+DEFINE FIELD parent_id ON symbol TYPE option<string>;
+DEFINE FIELD breadcrumbs ON symbol TYPE array<string> DEFAULT [];
+DEFINE FIELD summary ON symbol TYPE option<string>;
 DEFINE INDEX symbol_fingerprint_idx ON symbol FIELDS fingerprint;
+DEFINE INDEX idx_symbol_macro ON symbol FIELDS is_macro_node;
 
 DEFINE TABLE chunk SCHEMAFULL;
 DEFINE FIELD file_id ON chunk TYPE string;

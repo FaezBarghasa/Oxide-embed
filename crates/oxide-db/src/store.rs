@@ -72,6 +72,7 @@ pub trait ProjectStore: Send + Sync {
     async fn get_file_outline(&self, file_path: &str) -> Result<Option<String>>;
 
     async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>>;
+    async fn stair_search(&self, query: &str, limit: usize) -> Result<Vec<oxide_core::StairHit>>;
     async fn count_files(&self) -> Result<usize>;
     async fn count_symbols(&self) -> Result<usize>;
     async fn count_chunks(&self) -> Result<usize>;
