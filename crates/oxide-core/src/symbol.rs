@@ -71,7 +71,9 @@ where
     Ok(opt.unwrap_or(false))
 }
 
-pub fn deserialize_null_as_empty_vec<'de, D>(deserializer: D) -> std::result::Result<Vec<String>, D::Error>
+pub fn deserialize_null_as_empty_vec<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Vec<String>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {

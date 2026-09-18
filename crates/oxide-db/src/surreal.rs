@@ -72,7 +72,10 @@ struct RawSymbolResult {
     is_macro_node: bool,
     #[serde(default)]
     parent_id: Option<String>,
-    #[serde(default, deserialize_with = "oxide_core::deserialize_null_as_empty_vec")]
+    #[serde(
+        default,
+        deserialize_with = "oxide_core::deserialize_null_as_empty_vec"
+    )]
     breadcrumbs: Vec<String>,
     #[serde(default)]
     summary: Option<String>,
@@ -794,7 +797,11 @@ impl ProjectStore for SurrealProjectStore {
                     .file_id
                     .as_deref()
                     .and_then(|fid| {
-                        let clean_fid = fid.replace("file:", "").replace(['`', '"'], "").trim().to_string();
+                        let clean_fid = fid
+                            .replace("file:", "")
+                            .replace(['`', '"'], "")
+                            .trim()
+                            .to_string();
                         file_map.get(&clean_fid)
                     })
                     .cloned()
