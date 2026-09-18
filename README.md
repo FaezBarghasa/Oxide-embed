@@ -5,15 +5,16 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP%20Stdio-purple.svg)](https://modelcontextprotocol.io/)
 [![Debian Package](https://img.shields.io/badge/package-.deb%20amd64%20%2F%20arm64-blue.svg)](docs/INSTALL.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Build & Tests](https://img.shields.io/badge/tests-27%20passed-brightgreen.svg)]()
+[![Build & Tests](https://img.shields.io/badge/tests-36%20passed-brightgreen.svg)]()
 
 **Oxide-Embed** is an offline-first, ultra-high-throughput AST-aware context engine, codebase GraphRAG memory system, and Model Context Protocol (MCP) server engineered in pure Rust (2024 Edition).
 
 It unifies and surpasses the architectural paradigms of:
+- **`STAIR (arXiv:2609.03874v1)`**: Structure-Aware Information Retrieval with Code-ToC AST hierarchies (macro/leaf boundaries), breadcrumb context routing, and zero semantic bleeding.
+- **`moorcheh-ai/memanto`**: 13 typed semantic memory categories, automated conflict/contradiction resolution, temporal point-in-time state queries, conventional commit memory distillation, direct grounded answer synthesis, and bidirectional Markdown/Obsidian vault synchronization.
 - **`topoteretes/cognee`**: Hierarchical code-to-doc cognitive graphs, 2-hop GraphRAG traversals, Ebbinghaus temporal decay, and Cerebrum rule consolidation.
-- **`moorcheh-ai/memanto`**: 13 typed semantic memory categories, automated conflict/contradiction resolution, temporal point-in-time state queries, and companion agent commands.
 - **`cytostack/openwolf`**: Sub-microsecond AST pre-read guards, terminal error log condensing, and multi-agent handover checkpoints.
-- **`tokenix`**: Knapsack token budgeting, surgical AST slicing, task-driven context synthesis, bidirectional call/callee graphs, and native MCP integration.
+- **`tokenix`**: Knapsack token budgeting, surgical AST slicing, task-driven context synthesis, bidirectional call/callee graphs, Maximal Marginal Relevance (MMR) diversity reranking, and native MCP integration.
 
 Executing **100% offline with zero cloud API dependencies, sub-millisecond query latencies (<50 µs AST, <1 ms GraphRAG), and zero token waste**.
 
@@ -97,26 +98,35 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 
 ## 🚀 Key Features & Architectural Highlights
 
-### 1. Typed Semantic Memory & Conflict Resolution (`Memanto` Parity & Beyond)
+### 1. Structure-Aware Information Retrieval (`STAIR` Code-ToC, arXiv:2609.03874v1)
+- **Hierarchical Code-ToC AST Chunking**: Breaks codebases into bounded macro nodes (classes, traits, impl blocks) and leaf nodes (methods, functions, structs) across Rust, TS, Python, Go, Java, Bash, and Generic code.
+- **2-Stage Hierarchical Routing**: Maps queries directly to exact AST leaf nodes via breadcrumbs (`[impl MmrReranker > rerank]`), preventing semantic bleeding and cross-chunk competition.
+- **Structural Breadcrumb Context Injection**: Injects clean enclosing structural context without repeating identical source tokens.
+
+### 2. Typed Semantic Memory Fabric (`Memanto` Parity & Beyond)
 - **13 Specialized Semantic Memory Kinds**: `Instruction`, `Fact`, `Decision`, `Goal`, `Commitment`, `Preference`, `Relationship`, `Context`, `Event`, `Learning`, `Observation`, `Artifact`, and `Error`.
 - **Automated Contradiction & Conflict Resolution**: Vector similarity + opposite polarity detection (`never` vs `always`, `use` vs `avoid`, `no_std` vs `with std`) with `--auto-resolve` superseding.
+- **Conventional Commit Distillation**: Automatically parses git commit history and session transcripts into structured architectural memories, patterns, and rules.
+- **Direct Grounded Answer Synthesis**: `oxide_core::AnswerSynthesizer` synthesizes grounded answers with strict token budget packing and citation tracking.
+- **Bidirectional Markdown / Obsidian Vault Sync**: Export/import memory records to human-readable Markdown vault directories (`.oxide/memories/` or Obsidian vaults).
 - **Point-in-Time Temporal Queries**: Supports `--as-of <ISO8601>` time-travel queries to inspect memory and constraint state at any historical moment.
 - **Code Symbol Governance**: Graph edge (`governs`) connects architectural decisions directly to affected AST symbols (`SymbolRecord`).
 
-### 2. Cognitive Graph & GraphRAG (`Cognee` Parity & Beyond)
+### 3. Cognitive Graph & GraphRAG (`Cognee` Parity & Beyond)
 - **Deterministic Tree-Sitter AST Extraction**: Extracts symbols, signatures, call graphs, import dependencies, and parent-child hierarchies across Rust, TypeScript, Python, C, and C++ in <47 µs.
 - **DocLinker (ECL Pipeline)**: Hierarchically links markdown documentation sections to concrete code symbols without external LLM calls.
 - **Multi-Hop Subgraph Traversal**: Queries symbols, caller/callee chains, and associated architectural docs in a single bounded graph traversal in **530 µs**.
 - **Active Forgetting & Temporal Decay**: Exponentially decays unreferenced graph edges and auto-prunes orphan nodes (4.64 ns calculation).
 - **Cerebrum Consolidation**: Clusters resolved bug logs and synthesizes actionable project rules into `.oxide/docs/CEREBRUM.md`.
 
-### 3. Bidirectional Call Graphs & Impact Analysis (`Tokenix` Parity & Beyond)
+### 4. Bidirectional Call Graphs & Impact Analysis (`Tokenix` Parity & Beyond)
 - **`callers` & `callees`**: Instantly query inbound callers or outbound callees for any symbol in the workspace.
 - **`impact`**: Computes bidirectional blast radius showing all upstream code that would break if a symbol's signature changes.
 - **`tokenmap`**: Visualizes folder token densities and top context-heavy files with token percentages.
 - **`install-hook`**: Auto-configures agent hooks for Claude Code, Antigravity, and Cursor.
+- **MMR Diversity Reranker**: Information-theoretic Maximal Marginal Relevance reranking (`MmrReranker`) balancing candidate relevance vs. redundancy.
 
-### 4. Context Hygiene & Token Reduction (`OpenWolf` Parity & Beyond)
+### 5. Context Hygiene & Token Reduction (`OpenWolf` Parity & Beyond)
 - **Knapsack Token-Budget Packing**: Greedy budget packer (`--budget <N>`) that fits highest-value symbols, graph subgraphs, and docs strictly within token ceilings.
 - **Surgical AST Symbol Reading**: Slices and streams exclusively the target function/struct's source lines, signature, and doc comments directly from the AST (`read --symbol <name>`).
 - **Pre-Read Guard**: Intercepts file reads across agent sessions. If content hash is unchanged, returns a lightweight AST symbol outline stub instead of dumping thousands of tokens (4.19 µs lookup).
@@ -124,8 +134,8 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 - **Session Handover Checkpoints**: Generates atomic `.oxide/STATUS.md` state checkpoints for seamless multi-agent handovers.
 - **Local Token Ledger**: Measures input, output, cached, and reasoning tokens with estimated cost breakdowns and savings scoreboards.
 
-### 5. Agent Integration & Live Automation
-- **Native Model Context Protocol (MCP)**: Exposes 14 specialized tools over stdio for direct integration into Antigravity, Claude Code, Cursor, and Roo Code.
+### 6. Agent Integration & Live Automation
+- **Native Model Context Protocol (MCP)**: Exposes 15 specialized tools over stdio for direct integration into Antigravity, Claude Code, Cursor, and Roo Code.
 - **Live Debounced Watcher Daemon**: Real-time file system monitor (`oxide-embed watch` / `oxide-watch.service`) that incrementally re-indexes AST symbols and call edges on file save.
 
 ---
@@ -188,7 +198,10 @@ oxide-embed context "implement bare-metal SPI driver" --budget 1500
 # Surgically read only a specific AST symbol definition and docstring
 oxide-embed read crates/oxide-core/src/id.rs --symbol ProjectId
 
-# Search with token budget ceiling and GraphRAG expansion
+# STAIR Code-ToC hierarchical search (eliminates semantic bleeding)
+oxide-embed search "MmrReranker" --stair
+
+# Hybrid search with token budget ceiling and GraphRAG expansion
 oxide-embed search "init_hardware" --budget 1000 --with-graph
 ```
 
@@ -247,7 +260,7 @@ oxide-embed install-hook
 ## 🧪 Testing & Verification
 
 ```bash
-# Run all workspace unit and integration tests (27 passed)
+# Run all workspace unit and integration tests (36 passed)
 cargo test --workspace
 
 # Run all Criterion benchmarks

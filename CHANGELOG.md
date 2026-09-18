@@ -7,11 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.3.0] - 2026-09-17
+## [0.3.0] - 2026-09-18
 
 ### Added
 
-#### 1. Typed Semantic Memory & Companion Agent Interface (`Memanto` Parity & Beyond)
+#### 1. STAIR (Structure-Aware Information Retriever, arXiv:2609.03874v1) Code-ToC Engine
+- **AST Macro & Leaf Node Hierarchical Chunking**:
+  - Implemented across all extractors: Rust, TypeScript, Python, Go, Java, Bash, and Generic fallback.
+  - Automatically identifies macro container boundaries (`is_macro_node`) and leaf nodes, extracting breadcrumbs (e.g. `[impl MmrReranker > rerank]`) and natural summaries.
+- **Hierarchical STAIR Retrieval**:
+  - Direct 2-stage AST leaf-node routing in `oxide-db` via SurrealDB with deterministic file mapping.
+  - Added `--stair` flag to `oxide-embed search` CLI command.
+  - Added `oxide_stair_search` MCP tool for agentic workflows to eliminate semantic bleeding.
+
+#### 2. Memanto Semantic Memory Fabric Primitives
+- **Conventional Commit & Log Distillation (`MemoryDistiller`)**:
+  - Automatically distills git commits and raw session logs into structured architectural memories, patterns, and rules.
+- **Direct Grounded Answer Synthesis (`AnswerSynthesizer`)**:
+  - Synthesizes grounded answers directly from retrieved AST context and memories with citation mapping and token budget limits.
+- **Bidirectional Markdown / Obsidian Sync (`MarkdownMemorySync`)**:
+  - Bidirectional synchronization between SurrealDB typed memory records and Markdown vault directories (`.oxide/memories/` or Obsidian).
 - **13 Specialized Semantic Memory Categories (`MemoryKind`)**:
   - `Instruction`, `Fact`, `Decision`, `Goal`, `Commitment`, `Preference`, `Relationship`, `Context`, `Event`, `Learning`, `Observation`, `Artifact`, `Error`.
 - **Automated Contradiction & Conflict Resolution (`ConflictDetector`)**:
@@ -22,18 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Symbol Governance (`governs` Graph Edge)**:
   - Graph edges connecting architectural rules and decisions directly to target AST code symbols (`SymbolRecord`).
 
-#### 2. New CLI Subcommands & Context Synthesis
-- **`oxide-embed remember <content>`**:
-  - Store typed semantic memories with `--kind`, `--tags`, `--symbol`, and `--auto-resolve`.
-- **`oxide-embed recall <query>`**:
-  - Retrieve memories matching query with `--kind`, `--tags`, `--as-of`, `--budget`, and `--limit`.
-- **`oxide-embed conflicts`**:
-  - Audit active contradictions across project instructions, decisions, and preferences.
-- **Context Synthesis Upgrade (`oxide-embed context`)**:
-  - Automatically loads and integrates active typed semantic rules into synthesized prompt context alongside Cerebrum rules and AST symbol subgraphs.
+#### 3. Information-Theoretic MMR Diversity Reranker (`oxide-ml`)
+- **`MmrReranker`**:
+  - Implements Maximal Marginal Relevance to balance candidate relevance vs. redundancy, eliminating duplicate context tokens.
 
-#### 3. Model Context Protocol (MCP) Expansion (13 Tools)
-- Added `oxide_remember` and `oxide_recall` MCP tools for IDE-native agent memory storage and retrieval.
+#### 4. Model Context Protocol (MCP) Expansion (15 Tools)
+- Added `oxide_stair_search`, `oxide_remember`, and `oxide_recall` MCP tools for IDE-native agent workflows.
 
 ---
 

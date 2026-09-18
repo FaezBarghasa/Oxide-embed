@@ -69,10 +69,11 @@ Or configure manually in `claude_desktop_config.json`:
 
 ## 3. Available MCP Tools
 
-Oxide-embed exposes **14 specialized tools** for AI coding assistants:
+Oxide-embed exposes **15 specialized tools** for AI coding assistants:
 
 | Tool Name | Description | Key Arguments |
 | :--- | :--- | :--- |
+| `oxide_stair_search` | STAIR hierarchical Code-ToC leaf retrieval with breadcrumb routing | `query` (string), `limit` (int) |
 | `oxide_remember` | Store typed semantic memory (decision, preference, instruction) with conflict checks | `content` (string), `kind` (string), `tags` (array), `symbol_ref` (string), `auto_resolve` (bool) |
 | `oxide_recall` | Recall typed semantic memories with category, tags, and temporal filters | `query` (string), `kind` (string), `tags` (array), `as_of` (string), `budget` (int), `limit` (int) |
 | `oxide_get_rules` | Returns active consolidated architectural constraints, decisions, and instructions | None |

@@ -32,6 +32,11 @@ Oxide-embed/
 ```
 
 ### A. `oxide-core`
+- **STAIR Hit Data Model (`StairHit`)**: Hierarchical breadcrumb and structural leaf node container.
+- **Memanto Primitives**:
+  - `MemoryDistiller`: Distills conventional commits and agent session logs into structured architectural memories.
+  - `AnswerSynthesizer`: Grounded answer generator with citation index and token packing.
+  - `MarkdownMemorySync`: Bidirectional sync with Markdown / Obsidian vaults.
 - **Canonical Storage Resolution (`resolve_db_path`)**: Dynamically resolves `.oxide/project.db` (SurrealKV) with legacy fallbacks.
 - **Session & Project IDs**: UUIDv7 time-ordered identifiers (1.51 µs derivation).
 - **Session Read Guard**: LRU & hash-based context deduplication filter (4.19 µs lookup).
@@ -40,25 +45,27 @@ Oxide-embed/
 - **Knapsack Token Budget Packer**: Greedy knapsack allocation strictly enforcing token limits on prompt contexts.
 
 ### B. `oxide-parser`
-- **Tree-sitter AST Extractor**: Native bindings for Rust (46.8 µs), TypeScript (41.7 µs), Python (31.0 µs), C, and C++.
+- **STAIR AST Code-ToC Extractor**: Identifies macro vs. leaf nodes, breadcrumbs, and summaries across Rust (46.8 µs), TypeScript (41.7 µs), Python (31.0 µs), Go, Java, Bash, and Generic code.
 - **Call & Import Edge Extraction**: Discovers function calls, method invocations, and module import paths.
 - **Smart Symbol Chunking**: Chunks source files strictly along AST node boundaries (functions, structs, classes) instead of arbitrary token splits.
 - **Anatomy & Docstrings**: Extracts Markdown documentation sections and links them bi-directionally to code symbols.
 
 ### C. `oxide-ml`
+- **MMR Diversity Reranker (`MmrReranker`)**: Maximal Marginal Relevance reranking to eliminate candidate redundancy.
 - **ONNX Gemma Embedder (`OnnxGemmaEmbedder`)**: Hardware-accelerated 768d embeddings using `EmbeddingGemma-300M` and ONNX Runtime.
 - **Candle Qwen Embedder (`CandleQwenEmbedder`)**: High-accuracy 1024d embeddings using `Qwen3-Embedding-0.6B` and `candle-core`.
 - **Candle BERT Embedder (`CandleBertEmbedder`)**: Lightweight 384d embeddings using `bge-small-en-v1.5`.
 - **Vector Math**: Hardware-accelerated cosine similarity (611 ns) and K-Means code cluster distillation.
 
 ### D. `oxide-db`
+- **STAIR Hierarchical Search (`stair_search`)**: Sub-millisecond 2-stage AST leaf-node routing in SurrealDB.
 - **Embedded SurrealDB Engine**: Native in-process database with zero client-server network hops.
 - **GraphRAG Subgraph Traversal**: Multi-hop edge traversals (`CALLS`, `DEFINED_IN`, `IMPORTS`, `DOCUMENTS`) executing in **530 µs**.
 - **Hybrid Search**: Combines BM25 lexical keyword matching with KNN vector search in **149 µs**.
 
 ### E. `oxide-cli`
-- **CLI Subcommands**: `init`, `index`, `cognify`, `callers`, `callees`, `impact`, `tokenmap`, `context`, `search`, `explain`, `run`, `read`, `handoff`, `report`, `memify`, `consolidate`, `install-hook`, `watch`, `mcp`.
-- **MCP Server**: Implements 11 Model Context Protocol tools for AI coding assistants (Antigravity, Claude Code, Cursor, Roo Code).
+- **CLI Subcommands**: `init`, `index`, `cognify`, `callers`, `callees`, `impact`, `tokenmap`, `context`, `search` (with `--stair`), `explain`, `run`, `read`, `handoff`, `report`, `memify`, `consolidate`, `install-hook`, `watch`, `mcp`.
+- **MCP Server**: Implements 15 Model Context Protocol tools for AI coding assistants (Antigravity, Claude Code, Cursor, Roo Code).
 - **File Watcher**: `notify`-based incremental re-indexing daemon with systemd user service integration.
 
 ---
