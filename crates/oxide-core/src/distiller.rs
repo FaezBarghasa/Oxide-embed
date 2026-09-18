@@ -49,14 +49,13 @@ impl MemoryDistiller {
                 rest.trim().to_string(),
                 format!("Performance optimization in {}: {}", commit_hash, trimmed),
             )
-        } else if let Some(rest) = first_line.strip_prefix("docs:") {
+        } else {
+            let rest = first_line.strip_prefix("docs:")?;
             (
                 MemoryKind::Fact,
                 rest.trim().to_string(),
                 format!("Documentation update in {}: {}", commit_hash, trimmed),
             )
-        } else {
-            return None;
         };
 
         let mut record = MemoryRecord::new(project_id, kind, title, content);

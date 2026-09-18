@@ -50,8 +50,8 @@ pub async fn handle_distill(
     }
 
     let db_path = resolve_db_path(project_root).ok();
-    let store = if save && db_path.is_some() {
-        Some(SurrealProjectStore::open(db_path.as_ref().unwrap()).await?)
+    let store = if save && let Some(ref path) = db_path {
+        Some(SurrealProjectStore::open(path).await?)
     } else {
         None
     };

@@ -181,7 +181,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         is_macro_node: true,
                         parent_id: None,
                         breadcrumbs: vec![name_clean.to_string()],
-                        summary: Some(format!("Slint component {} at line {}", name_clean, line_no)),
+                        summary: Some(format!(
+                            "Slint component {} at line {}",
+                            name_clean, line_no
+                        )),
                     });
                 } else if trimmed.starts_with("export struct ") || trimmed.starts_with("struct ") {
                     let parts: Vec<&str> = trimmed.split_whitespace().collect();

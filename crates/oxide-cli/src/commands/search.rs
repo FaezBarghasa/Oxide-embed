@@ -30,7 +30,10 @@ pub async fn handle_search(
             return Ok(());
         }
 
-        println!("🏛️  STAIR Hierarchical Code-ToC Results for '{}':\n", query_str);
+        println!(
+            "🏛️  STAIR Hierarchical Code-ToC Results for '{}':\n",
+            query_str
+        );
         for (idx, hit) in stair_hits.iter().enumerate() {
             let breadcrumbs_str = if hit.breadcrumbs.is_empty() {
                 hit.leaf_symbol.clone()

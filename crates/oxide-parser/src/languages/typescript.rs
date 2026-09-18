@@ -139,7 +139,9 @@ fn traverse_node(
         }
         breadcrumbs.push(name.to_string());
 
-        let parent_id = parent_scope.as_ref().map(|scope| SymbolId::new(file_id, scope));
+        let parent_id = parent_scope
+            .as_ref()
+            .map(|scope| SymbolId::new(file_id, scope));
         let summary = if is_macro {
             Some(format!(
                 "{} {} defined at lines {}-{}",

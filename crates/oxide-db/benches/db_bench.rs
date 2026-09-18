@@ -39,6 +39,10 @@ fn bench_database_operations(c: &mut Criterion) {
                 signature: Some(format!("pub fn sym_{}()", i)),
                 doc: None,
                 fingerprint: format!("fp_{}", i),
+                is_macro_node: false,
+                parent_id: None,
+                breadcrumbs: vec![format!("sym_{}", i)],
+                summary: None,
             };
             s.upsert_symbol(&sym).await.unwrap();
 

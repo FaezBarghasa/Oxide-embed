@@ -77,7 +77,7 @@ impl AnswerSynthesizer {
                     title: mem.title.clone(),
                 });
             }
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // 3. Relevant Code Symbols & Subgraphs

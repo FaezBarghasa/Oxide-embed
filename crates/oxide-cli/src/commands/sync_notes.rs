@@ -1,4 +1,4 @@
-use oxide_core::error::{OxideError, Result};
+use oxide_core::error::Result;
 use oxide_core::id::ProjectId;
 use oxide_core::manifest::OxideManifest;
 use oxide_core::markdown_sync::MarkdownMemorySync;
@@ -40,7 +40,8 @@ pub async fn handle_sync_notes(project_root: &Path, direction: Option<&str>) -> 
                     let entry = entry?;
                     let path = entry.path();
                     if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                        let records = MarkdownMemorySync::import_from_file(manifest, &path)?;
+                        let records =
+                            MarkdownMemorySync::import_from_file(manifest.clone(), &path)?;
                         total_imported += records.len();
                         store.sync_all_memories(&records).await?;
                     }
@@ -51,17 +52,18 @@ pub async fn handle_sync_notes(project_root: &Path, direction: Option<&str>) -> 
                 total_imported
             );
         }
-        "bidirectional" | _ => {
+        _ => {
             // First import any edited notes from disk
             let mut imported_records = Vec::new();
             if memories_dir.exists() {
                 for entry in std::fs::read_dir(&memories_dir)? {
                     let entry = entry?;
                     let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                        if let Ok(records) = MarkdownMemorySync::import_from_file(manifest, &path) {
-                            imported_records.extend(records);
-                        }
+                    if path.extension().and_then(|s| s.to_str()) == Some("md")
+                        && let Ok(records) =
+                            MarkdownMemorySync::import_from_file(manifest.clone(), &path)
+                    {
+                        imported_records.extend(records);
                     }
                 }
                 if !imported_records.is_empty() {

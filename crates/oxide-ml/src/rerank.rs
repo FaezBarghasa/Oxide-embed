@@ -71,7 +71,7 @@ impl MmrReranker {
                 let sim_to_query = query_sims[u_idx];
 
                 // Compute maximum similarity to any already selected candidate
-                let mut max_sim_to_selected = f32::NEG_INFINITY;
+                let mut max_sim_to_selected = 0.0f32;
                 for &s_idx in &selected_indices {
                     let sim = cosine_similarity(&candidates[u_idx].1, &candidates[s_idx].1);
                     if sim > max_sim_to_selected {
@@ -106,22 +106,22 @@ mod tests {
     #[test]
     fn test_mmr_diversity() {
         let reranker = MmrReranker::new(0.5);
-        let query = vec![1.0, 0.0, 0.0];
+        let query_vec = vec![1.0, 1.0, 0.0];
 
-        // Candidate 0: Perfect match
-        let c0 = (0, vec![1.0, 0.0, 0.0]);
-        // Candidate 1: Identical to candidate 0 (redundant)
-        let c1 = (1, vec![0.99, 0.01, 0.0]);
-        // Candidate 2: Diverse, still somewhat relevant
-        let c2 = (2, vec![0.7, 0.7, 0.0]);
+        // C0: Query sim = 0.707, selected first
+        let c0 = vec![1.0, 0.0, 0.0];
+        // C1: Redundant copy of C0 -> query sim = 0.707, sim_to_c0 = 1.0 -> MMR = 0.5*0.707 - 0.5*1.0 = -0.1465
+        let c1 = vec![1.0, 0.0, 0.0];
+        // C2: Diverse orthogonal vector -> query sim = 0.707, sim_to_c0 = 0.0 -> MMR = 0.5*0.707 - 0.5*0.0 = +0.3535
+        let c2 = vec![0.0, 1.0, 0.0];
 
-        let candidates = vec![c0, c1, c2];
-        let results = reranker.rerank(&query, &candidates, 2);
+        let candidates = vec![(0, c0), (1, c1), (2, c2)];
+        let results = reranker.rerank(&query_vec, &candidates, 2);
 
         assert_eq!(results.len(), 2);
         // First must be c0
         assert_eq!(results[0].0, 0);
-        // Second should be c2 because c1 is penalized for high similarity to c0
+        // Second should be c2 (+0.3535) rather than duplicate c1 (-0.1465)
         assert_eq!(results[1].0, 2);
     }
 }

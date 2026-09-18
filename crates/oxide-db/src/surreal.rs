@@ -70,7 +70,7 @@ struct RawSymbolResult {
     is_macro_node: bool,
     #[serde(default)]
     parent_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "oxide_core::deserialize_null_as_empty_vec")]
     breadcrumbs: Vec<String>,
     #[serde(default)]
     summary: Option<String>,
@@ -747,7 +747,11 @@ impl ProjectStore for SurrealProjectStore {
                 confidence = 0.7;
             } else if sum_lower.contains(&query_lower) {
                 confidence = 0.5;
-            } else if sym.breadcrumbs.iter().any(|b| b.to_lowercase().contains(&query_lower)) {
+            } else if sym
+                .breadcrumbs
+                .iter()
+                .any(|b| b.to_lowercase().contains(&query_lower))
+            {
                 confidence = 0.4;
             }
 

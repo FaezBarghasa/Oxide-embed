@@ -3,7 +3,9 @@ use oxide_core::budget::BudgetCandidate;
 use oxide_core::context_builder::ContextSynthesizer;
 use oxide_core::error::{OxideError, Result};
 use oxide_core::handoff::HandoffCheckpoint;
+use oxide_core::id::ProjectId;
 use oxide_core::memify::CerebrumRule;
+use oxide_core::memory::MemoryKind;
 use oxide_db::traversal::GraphTraversalService;
 use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
 use oxide_ml::Embedder;
@@ -762,13 +764,13 @@ impl McpServer {
                 let save = args.get("save").and_then(|v| v.as_bool()).unwrap_or(true);
 
                 let manifest =
-                    oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_root)
+                    oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_dir)
                         .map(|m| m.project_id)
                         .unwrap_or_else(|_| ProjectId::new_v7());
 
                 let output = std::process::Command::new("git")
                     .arg("-C")
-                    .arg(&self.workspace_root)
+                    .arg(&self.workspace_dir)
                     .arg("log")
                     .arg(commits)
                     .arg("--pretty=format:%h|%an|%s%n%b%n---COMMIT_END---")
@@ -817,9 +819,9 @@ impl McpServer {
                         .get("direction")
                         .and_then(|v| v.as_str())
                         .unwrap_or("bidirectional");
-                    let memories_dir = self.workspace_root.join(".oxide").join("memories");
+                    let memories_dir = self.workspace_dir.join(".oxide").join("memories");
                     let manifest =
-                        oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_root)
+                        oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_dir)
                             .map(|m| m.project_id)
                             .unwrap_or_else(|_| ProjectId::new_v7());
 
@@ -855,16 +857,15 @@ impl McpServer {
                                 total
                             ))
                         }
-                        "bidirectional" | _ => {
+                        _ => {
                             let mut imported = Vec::new();
                             if memories_dir.exists() {
                                 for entry in std::fs::read_dir(&memories_dir)? {
                                     let entry = entry?;
                                     let path = entry.path();
-                                    if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                                        if let Ok(records) = oxide_core::markdown_sync::MarkdownMemorySync::import_from_file(manifest.clone(), &path) {
-                                            imported.extend(records);
-                                        }
+                                    if path.extension().and_then(|s| s.to_str()) == Some("md")
+                                        && let Ok(records) = oxide_core::markdown_sync::MarkdownMemorySync::import_from_file(manifest.clone(), &path) {
+                                        imported.extend(records);
                                     }
                                 }
                                 if !imported.is_empty() {
@@ -900,10 +901,16 @@ impl McpServer {
                 if let Some(st) = store {
                     let hits = st.stair_search(query, limit).await?;
                     if hits.is_empty() {
-                        return Ok(format!("No STAIR hierarchical matches found for `{}`", query));
+                        return Ok(format!(
+                            "No STAIR hierarchical matches found for `{}`",
+                            query
+                        ));
                     }
 
-                    let mut out = format!("# 🏛️ STAIR Code-ToC Hierarchical Results for `{}`\n\n", query);
+                    let mut out = format!(
+                        "# 🏛️ STAIR Code-ToC Hierarchical Results for `{}`\n\n",
+                        query
+                    );
                     for (i, hit) in hits.iter().enumerate() {
                         let breadcrumbs_str = if hit.breadcrumbs.is_empty() {
                             hit.leaf_symbol.clone()

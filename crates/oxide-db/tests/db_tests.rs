@@ -40,6 +40,10 @@ async fn test_surreal_db_crud_and_traversal() {
         signature: Some("pub fn init_hardware() -> Result<()>".into()),
         doc: Some("Initializes SPI and UART controllers".into()),
         fingerprint: "fp_init".into(),
+        is_macro_node: false,
+        parent_id: None,
+        breadcrumbs: vec!["driver".into(), "init_hardware".into()],
+        summary: None,
     };
 
     let sym_caller = SymbolRecord {
@@ -53,6 +57,10 @@ async fn test_surreal_db_crud_and_traversal() {
         signature: Some("pub fn main_bootstrap()".into()),
         doc: None,
         fingerprint: "fp_boot".into(),
+        is_macro_node: false,
+        parent_id: None,
+        breadcrumbs: vec!["driver".into(), "main_bootstrap".into()],
+        summary: None,
     };
 
     store

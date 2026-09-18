@@ -57,10 +57,18 @@ pub struct SymbolRecord {
     pub is_macro_node: bool,
     #[serde(default)]
     pub parent_id: Option<SymbolId>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_as_empty_vec")]
     pub breadcrumbs: Vec<String>,
     #[serde(default)]
     pub summary: Option<String>,
+}
+
+pub fn deserialize_null_as_empty_vec<'de, D>(deserializer: D) -> std::result::Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let opt = Option::<Vec<String>>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
 }
 
 /// Structural search hit returned by STAIR hierarchical retrieval

@@ -82,10 +82,7 @@ fn traverse_node(
 
         let is_macro = matches!(
             kind,
-            SymbolKind::Class
-                | SymbolKind::Interface
-                | SymbolKind::Enum
-                | SymbolKind::Module
+            SymbolKind::Class | SymbolKind::Interface | SymbolKind::Enum | SymbolKind::Module
         );
 
         let mut breadcrumbs = Vec::new();

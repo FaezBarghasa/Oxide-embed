@@ -128,6 +128,10 @@ Detailed specifications for MotorController speed curves.
         signature: Some("pub struct DeviceManager".into()),
         doc: None,
         fingerprint: "fp1".into(),
+        is_macro_node: true,
+        parent_id: None,
+        breadcrumbs: vec!["DeviceManager".into()],
+        summary: Some("struct DeviceManager".into()),
     };
 
     let edges = DocLinker::link_sections_to_symbols(&sections, &[sym_dev]);

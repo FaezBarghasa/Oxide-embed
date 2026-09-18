@@ -68,7 +68,7 @@ impl MarkdownMemorySync {
                     if let Some(ref author) = item.author {
                         md.push_str(&format!("- **Author**: `{}`\n", author));
                     }
-                    md.push_str("\n");
+                    md.push('\n');
                     md.push_str(&item.content);
                     md.push_str("\n\n---\n\n");
                 }
@@ -210,7 +210,8 @@ mod tests {
         .with_tags(vec!["embedded".into(), "stm32".into()]);
 
         let tmp_dir = std::env::temp_dir().join(format!("oxide-md-sync-test-{}", pid));
-        let exported = MarkdownMemorySync::export_to_dir(&tmp_dir, &[m1.clone()]).expect("export");
+        let exported =
+            MarkdownMemorySync::export_to_dir(&tmp_dir, std::slice::from_ref(&m1)).expect("export");
         assert!(!exported.is_empty());
 
         let dec_file = tmp_dir.join("decision.md");
