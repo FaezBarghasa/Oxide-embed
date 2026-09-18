@@ -42,4 +42,5 @@ pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus};
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
 pub use symbol::{
     CallEdge, ImportEdge, StairHit, SymbolKind, SymbolRecord, deserialize_null_as_empty_vec,
+    deserialize_null_as_false,
 };

@@ -58,6 +58,8 @@ struct RawChunkResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct RawSymbolResult {
+    #[serde(default)]
+    file_id: Option<String>,
     file_path: Option<String>,
     name: String,
     qualified_name: Option<String>,
@@ -66,7 +68,7 @@ struct RawSymbolResult {
     end_line: usize,
     signature: Option<String>,
     doc: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "oxide_core::deserialize_null_as_false")]
     is_macro_node: bool,
     #[serde(default)]
     parent_id: Option<String>,
@@ -700,7 +702,7 @@ impl ProjectStore for SurrealProjectStore {
         let query_lower = query.to_lowercase();
         let sym_sql = r#"
             SELECT 
-                (SELECT VALUE relative_path FROM file WHERE id = type::record('file', symbol.file_id))[0] AS file_path,
+                file_id,
                 name,
                 qualified_name,
                 kind,
@@ -713,7 +715,7 @@ impl ProjectStore for SurrealProjectStore {
                 breadcrumbs,
                 summary
             FROM symbol
-            LIMIT 500;
+            LIMIT 1000;
         "#;
 
         let mut sym_res = self
@@ -723,6 +725,38 @@ impl ProjectStore for SurrealProjectStore {
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
         let symbols: Vec<RawSymbolResult> = take_vec(&mut sym_res, 0)?;
+
+        let mut file_res = self
+            .db
+            .query("SELECT id, relative_path FROM file;")
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+
+        #[derive(Debug, Deserialize)]
+        struct FileMapRow {
+            id: serde_json::Value,
+            relative_path: String,
+        }
+
+        let file_rows: Vec<FileMapRow> = take_vec(&mut file_res, 0)?;
+        let mut file_map = std::collections::HashMap::new();
+        for r in file_rows {
+            let id_str = match r.id {
+                serde_json::Value::String(s) => s,
+                serde_json::Value::Object(map) => map
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                _ => r.id.to_string(),
+            };
+            let clean_id = id_str
+                .replace("file:", "")
+                .replace(['`', '"'], "")
+                .trim()
+                .to_string();
+            file_map.insert(clean_id, r.relative_path);
+        }
 
         let mut hits = Vec::new();
         for sym in symbols {
@@ -756,7 +790,16 @@ impl ProjectStore for SurrealProjectStore {
             }
 
             if confidence > 0.0 || query.is_empty() {
-                let file_path = sym.file_path.unwrap_or_else(|| "unknown".to_string());
+                let file_path = sym
+                    .file_id
+                    .as_deref()
+                    .and_then(|fid| {
+                        let clean_fid = fid.replace("file:", "").replace(['`', '"'], "").trim().to_string();
+                        file_map.get(&clean_fid)
+                    })
+                    .cloned()
+                    .or(sym.file_path)
+                    .unwrap_or_else(|| "unknown".to_string());
                 let macro_parent = sym.breadcrumbs.first().cloned();
 
                 hits.push(oxide_core::StairHit {

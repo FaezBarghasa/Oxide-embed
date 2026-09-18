@@ -53,7 +53,7 @@ pub struct SymbolRecord {
     pub doc: Option<String>,
     pub fingerprint: String,
     // STAIR (Structure-Aware Information Retriever) Hierarchy Fields
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_as_false")]
     pub is_macro_node: bool,
     #[serde(default)]
     pub parent_id: Option<SymbolId>,
@@ -61,6 +61,14 @@ pub struct SymbolRecord {
     pub breadcrumbs: Vec<String>,
     #[serde(default)]
     pub summary: Option<String>,
+}
+
+pub fn deserialize_null_as_false<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let opt = Option::<bool>::deserialize(deserializer)?;
+    Ok(opt.unwrap_or(false))
 }
 
 pub fn deserialize_null_as_empty_vec<'de, D>(deserializer: D) -> std::result::Result<Vec<String>, D::Error>
