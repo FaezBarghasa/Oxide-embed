@@ -1,5 +1,5 @@
 use oxide_core::error::{OxideError, Result};
-use oxide_core::{OxideConfig, OxideManifest, resolve_db_path};
+use oxide_core::{OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use oxide_parser::languages::get_extractor;
@@ -15,7 +15,7 @@ pub async fn handle_index(project_root: &Path, _force: bool) -> Result<()> {
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let config = OxideConfig::load_from_dir(&oxide_dir)?;
-    let db_path = resolve_db_path(project_root)?;
+    let db_path = manifest.db_path(&oxide_dir);
     let store = SurrealProjectStore::open(&db_path).await?;
 
     let start_time = Instant::now();

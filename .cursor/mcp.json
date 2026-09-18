@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "oxide-embed": {
+      "args": [
+        "mcp-serve"
+      ],
+      "command": "/home/jrad/.local/bin/oxide-embed"
+    }
+  }
+}
