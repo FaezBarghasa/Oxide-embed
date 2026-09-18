@@ -90,6 +90,9 @@ pub enum Commands {
 
         #[arg(long, help = "Token budget ceiling for packed search results")]
         budget: Option<usize>,
+
+        #[arg(long, help = "Use STAIR (Structure-Aware Information Retriever) hierarchical Code-ToC routing")]
+        stair: bool,
     },
 
     #[command(

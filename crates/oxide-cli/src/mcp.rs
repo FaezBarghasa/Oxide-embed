@@ -249,6 +249,18 @@ impl McpServer {
                                     "direction": { "type": "string", "description": "Direction: export, import, bidirectional (default)" }
                                 }
                             }
+                        },
+                        {
+                            "name": "oxide_stair_search",
+                            "description": "STAIR (Structure-Aware Information Retriever) hierarchical Code-ToC search returning structural breadcrumbs, leaf definitions, and signatures.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "query": { "type": "string", "description": "Code structure or symbol query" },
+                                    "limit": { "type": "integer", "description": "Maximum number of hierarchical hits (default 5)" }
+                                },
+                                "required": ["query"]
+                            }
                         }
                     ]
                 })),
@@ -872,6 +884,44 @@ impl McpServer {
                             ))
                         }
                     }
+                } else {
+                    Err(OxideError::Config("Oxide database not found.".into()))
+                }
+            }
+
+            "oxide_stair_search" => {
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                let limit = args
+                    .get("limit")
+                    .and_then(|v| v.as_u64())
+                    .map(|l| l as usize)
+                    .unwrap_or(5);
+
+                if let Some(st) = store {
+                    let hits = st.stair_search(query, limit).await?;
+                    if hits.is_empty() {
+                        return Ok(format!("No STAIR hierarchical matches found for `{}`", query));
+                    }
+
+                    let mut out = format!("# 🏛️ STAIR Code-ToC Hierarchical Results for `{}`\n\n", query);
+                    for (i, hit) in hits.iter().enumerate() {
+                        let breadcrumbs_str = if hit.breadcrumbs.is_empty() {
+                            hit.leaf_symbol.clone()
+                        } else {
+                            hit.breadcrumbs.join(" > ")
+                        };
+                        out.push_str(&format!(
+                            "{}. [{:.2}] **`{}`** (L{}-L{})\n   - **Hierarchy**: `{}`\n   - **Signature**: `{}`\n\n",
+                            i + 1,
+                            hit.confidence,
+                            hit.file_path,
+                            hit.start_line,
+                            hit.end_line,
+                            breadcrumbs_str,
+                            hit.signature.as_deref().unwrap_or(&hit.leaf_symbol)
+                        ));
+                    }
+                    Ok(out)
                 } else {
                     Err(OxideError::Config("Oxide database not found.".into()))
                 }

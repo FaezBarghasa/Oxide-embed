@@ -121,6 +121,7 @@ fn traverse_node(
             start_point.row + 1,
             end_point.row + 1
         );
+        let symbol_id = SymbolId::new(file_id, &qualified_name);
         let is_macro = matches!(
             kind,
             SymbolKind::Class

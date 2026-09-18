@@ -57,6 +57,26 @@ struct RawChunkResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct RawSymbolResult {
+    file_path: Option<String>,
+    name: String,
+    qualified_name: Option<String>,
+    kind: String,
+    start_line: usize,
+    end_line: usize,
+    signature: Option<String>,
+    doc: Option<String>,
+    #[serde(default)]
+    is_macro_node: bool,
+    #[serde(default)]
+    parent_id: Option<String>,
+    #[serde(default)]
+    breadcrumbs: Vec<String>,
+    #[serde(default)]
+    summary: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct MemoryRow {
     id: serde_json::Value,
     project_id: String,
@@ -194,7 +214,11 @@ impl ProjectStore for SurrealProjectStore {
                 end_line = $end_line,
                 signature = $signature,
                 doc = $doc,
-                fingerprint = $fingerprint;
+                fingerprint = $fingerprint,
+                is_macro_node = $is_macro_node,
+                parent_id = $parent_id,
+                breadcrumbs = $breadcrumbs,
+                summary = $summary;
         "#;
 
         self.db
@@ -209,6 +233,10 @@ impl ProjectStore for SurrealProjectStore {
             .bind(("signature", symbol.signature.clone()))
             .bind(("doc", symbol.doc.clone()))
             .bind(("fingerprint", symbol.fingerprint.clone()))
+            .bind(("is_macro_node", symbol.is_macro_node))
+            .bind(("parent_id", symbol.parent_id.as_ref().map(|p| p.0.clone())))
+            .bind(("breadcrumbs", symbol.breadcrumbs.clone()))
+            .bind(("summary", symbol.summary.clone()))
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
@@ -665,6 +693,88 @@ impl ProjectStore for SurrealProjectStore {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         hits.truncate(query.limit);
+        Ok(hits)
+    }
+
+    async fn stair_search(&self, query: &str, limit: usize) -> Result<Vec<oxide_core::StairHit>> {
+        let query_lower = query.to_lowercase();
+        let sym_sql = r#"
+            SELECT 
+                (SELECT VALUE relative_path FROM file WHERE id = type::record('file', symbol.file_id))[0] AS file_path,
+                name,
+                qualified_name,
+                kind,
+                start_line,
+                end_line,
+                signature,
+                doc,
+                is_macro_node,
+                parent_id,
+                breadcrumbs,
+                summary
+            FROM symbol
+            LIMIT 500;
+        "#;
+
+        let mut sym_res = self
+            .db
+            .query(sym_sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+
+        let symbols: Vec<RawSymbolResult> = take_vec(&mut sym_res, 0)?;
+
+        let mut hits = Vec::new();
+        for sym in symbols {
+            let name_lower = sym.name.to_lowercase();
+            let qual_lower = sym
+                .qualified_name
+                .as_ref()
+                .map(|q| q.to_lowercase())
+                .unwrap_or_default();
+            let sum_lower = sym
+                .summary
+                .as_ref()
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            let mut confidence = 0.0f32;
+            if name_lower == query_lower {
+                confidence = 1.0;
+            } else if name_lower.contains(&query_lower) {
+                confidence = 0.8;
+            } else if qual_lower.contains(&query_lower) {
+                confidence = 0.7;
+            } else if sum_lower.contains(&query_lower) {
+                confidence = 0.5;
+            } else if sym.breadcrumbs.iter().any(|b| b.to_lowercase().contains(&query_lower)) {
+                confidence = 0.4;
+            }
+
+            if confidence > 0.0 || query.is_empty() {
+                let file_path = sym.file_path.unwrap_or_else(|| "unknown".to_string());
+                let macro_parent = sym.breadcrumbs.first().cloned();
+
+                hits.push(oxide_core::StairHit {
+                    breadcrumbs: sym.breadcrumbs,
+                    leaf_symbol: sym.name,
+                    signature: sym.signature,
+                    file_path,
+                    start_line: sym.start_line,
+                    end_line: sym.end_line,
+                    code_body: sym.summary.unwrap_or_default(),
+                    confidence,
+                    macro_parent,
+                });
+            }
+        }
+
+        hits.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        hits.truncate(limit);
         Ok(hits)
     }
 

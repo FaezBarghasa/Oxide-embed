@@ -12,6 +12,7 @@ pub async fn handle_search(
     with_graph: bool,
     hops: usize,
     budget: Option<usize>,
+    stair: bool,
 ) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
@@ -21,6 +22,34 @@ pub async fn handle_search(
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let db_path = oxide_dir.join(&manifest.storage.path);
     let store = SurrealProjectStore::open(&db_path).await?;
+
+    if stair {
+        let stair_hits = store.stair_search(query_str, limit).await?;
+        if stair_hits.is_empty() {
+            println!("No STAIR hierarchical matches found for '{}'", query_str);
+            return Ok(());
+        }
+
+        println!("🏛️  STAIR Hierarchical Code-ToC Results for '{}':\n", query_str);
+        for (idx, hit) in stair_hits.iter().enumerate() {
+            let breadcrumbs_str = if hit.breadcrumbs.is_empty() {
+                hit.leaf_symbol.clone()
+            } else {
+                hit.breadcrumbs.join(" > ")
+            };
+            println!(
+                "{}. [{:.2}] {} (L{}-L{})\n   Breadcrumbs: [{}]\n   Signature:   {}\n",
+                idx + 1,
+                hit.confidence,
+                hit.file_path,
+                hit.start_line,
+                hit.end_line,
+                breadcrumbs_str,
+                hit.signature.as_deref().unwrap_or(&hit.leaf_symbol)
+            );
+        }
+        return Ok(());
+    }
 
     let embedder = CandleBertEmbedder::new_offline();
     let query_embedding = embedder.embed(query_str).await.ok();
