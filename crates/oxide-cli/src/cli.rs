@@ -256,6 +256,48 @@ pub enum Commands {
     Conflicts,
 
     #[command(
+        about = "Generate direct grounded answers synthesizing recalled memories, rules, and code graph"
+    )]
+    Answer {
+        #[arg(help = "Question or query to answer")]
+        question: String,
+
+        #[arg(
+            short,
+            long,
+            help = "Category filter: instruction, decision, fact, preference, etc."
+        )]
+        kind: Option<String>,
+
+        #[arg(
+            short,
+            long,
+            default_value = "1000",
+            help = "Token budget ceiling for the answer"
+        )]
+        budget: usize,
+    },
+
+    #[command(
+        about = "Distill architectural decisions, learnings, and errors from git commit history"
+    )]
+    Distill {
+        #[arg(short, long, help = "Git commit range (e.g. HEAD~10..HEAD)")]
+        commits: Option<String>,
+
+        #[arg(short, long, help = "Save distilled memories directly to database")]
+        save: bool,
+    },
+
+    #[command(
+        about = "Synchronize memories bidirectionally with Obsidian / Markdown notes in .oxide/memories/"
+    )]
+    SyncNotes {
+        #[arg(short, long, help = "Direction: export, import, bidirectional")]
+        direction: Option<String>,
+    },
+
+    #[command(
         about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration",
         alias = "mcp-serve",
         alias = "serve"

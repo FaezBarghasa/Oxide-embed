@@ -106,10 +106,17 @@ impl WorkspaceWatcher {
 
     fn should_index(&self, path: &Path) -> bool {
         let str_rep = path.to_string_lossy();
-        if str_rep.contains("/target/")
-            || str_rep.contains("/.git/")
-            || str_rep.contains("/.oxide/")
+        if str_rep.contains("/target/") || str_rep.contains("/.git/") {
+            return false;
+        }
+
+        if str_rep.contains("/.oxide/memories/")
+            && path.extension().and_then(|s| s.to_str()) == Some("md")
         {
+            return true;
+        }
+
+        if str_rep.contains("/.oxide/") {
             return false;
         }
 
@@ -125,6 +132,19 @@ impl WorkspaceWatcher {
         embedder: &CandleBertEmbedder,
         chunker: &Chunker,
     ) -> Result<usize> {
+        let str_rep = path.to_string_lossy();
+        if str_rep.contains("/.oxide/memories/")
+            && path.extension().and_then(|s| s.to_str()) == Some("md")
+        {
+            let records = oxide_core::markdown_sync::MarkdownMemorySync::import_from_file(
+                project_id.clone(),
+                path,
+            )?;
+            let count = records.len();
+            store.sync_all_memories(&records).await?;
+            return Ok(count);
+        }
+
         let content = std::fs::read_to_string(path)?;
         let rel_path = path.strip_prefix(&self.workspace_dir).unwrap_or(path);
         let rel_str = rel_path.to_string_lossy().to_string();

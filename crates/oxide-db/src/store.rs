@@ -59,6 +59,8 @@ pub trait ProjectStore: Send + Sync {
         threshold: f32,
     ) -> Result<Vec<MemoryRecord>>;
     async fn list_active_rules(&self) -> Result<Vec<MemoryRecord>>;
+    async fn list_all_memories(&self) -> Result<Vec<MemoryRecord>>;
+    async fn sync_all_memories(&self, memories: &[MemoryRecord]) -> Result<()>;
     async fn link_memory_to_symbol(
         &self,
         mem_id: &MemoryId,

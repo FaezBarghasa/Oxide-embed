@@ -156,6 +156,9 @@ DEFINE FIELD tags ON memory_record TYPE array<string>;
 DEFINE FIELD symbol_ref ON memory_record TYPE option<string>;
 DEFINE FIELD status ON memory_record TYPE string DEFAULT "active";
 DEFINE FIELD superseded_by ON memory_record TYPE option<string>;
+DEFINE FIELD author ON memory_record TYPE option<string>;
+DEFINE FIELD confidence ON memory_record TYPE float DEFAULT 1.0;
+DEFINE FIELD source_hash ON memory_record TYPE option<string>;
 DEFINE FIELD embedding ON memory_record TYPE option<array<float>>;
 DEFINE FIELD created_at ON memory_record TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_until ON memory_record TYPE option<datetime>;
@@ -167,4 +170,16 @@ DEFINE FIELD in ON governs TYPE record<memory_record>;
 DEFINE FIELD out ON governs TYPE record<symbol>;
 DEFINE FIELD relation ON governs TYPE string DEFAULT "governs";
 DEFINE FIELD created_at ON governs TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE replaces SCHEMAFULL;
+DEFINE FIELD in ON replaces TYPE record<memory_record>;
+DEFINE FIELD out ON replaces TYPE record<memory_record>;
+DEFINE FIELD reason ON replaces TYPE option<string>;
+DEFINE FIELD created_at ON replaces TYPE datetime DEFAULT time::now();
+
+DEFINE TABLE derived_from SCHEMAFULL;
+DEFINE FIELD in ON derived_from TYPE record<memory_record>;
+DEFINE FIELD out ON derived_from TYPE option<string>;
+DEFINE FIELD source_type ON derived_from TYPE string DEFAULT "git_commit";
+DEFINE FIELD created_at ON derived_from TYPE datetime DEFAULT time::now();
 "#;

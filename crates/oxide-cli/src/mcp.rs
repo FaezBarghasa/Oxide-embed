@@ -215,6 +215,40 @@ impl McpServer {
                                 "type": "object",
                                 "properties": {}
                             }
+                        },
+                        {
+                            "name": "oxide_answer",
+                            "description": "Generate direct grounded answers synthesizing recalled memories, rules, and live AST code graph.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "question": { "type": "string", "description": "Question or query to answer" },
+                                    "kind": { "type": "string", "description": "Optional category filter" },
+                                    "budget": { "type": "integer", "description": "Token budget ceiling (default 1000)" }
+                                },
+                                "required": ["question"]
+                            }
+                        },
+                        {
+                            "name": "oxide_distill",
+                            "description": "Distills decisions, learnings, and resolved errors from recent git commit history into project memory.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "commits": { "type": "string", "description": "Git commit range (e.g. HEAD~5..HEAD)" },
+                                    "save": { "type": "boolean", "description": "Persist directly to database (default true)" }
+                                }
+                            }
+                        },
+                        {
+                            "name": "oxide_sync_memories",
+                            "description": "Synchronizes memories bidirectionally with Obsidian / Markdown notes in .oxide/memories/.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "direction": { "type": "string", "description": "Direction: export, import, bidirectional (default)" }
+                                }
+                            }
                         }
                     ]
                 })),
@@ -628,6 +662,215 @@ impl McpServer {
                             ));
                         }
                         Ok(out)
+                    }
+                } else {
+                    Err(OxideError::Config("Oxide database not found.".into()))
+                }
+            }
+
+            "oxide_answer" => {
+                if let Some(st) = store {
+                    let question = args.get("question").and_then(|v| v.as_str()).unwrap_or("");
+                    let kind_str = args.get("kind").and_then(|v| v.as_str());
+                    let budget =
+                        args.get("budget").and_then(|v| v.as_u64()).unwrap_or(1000) as usize;
+
+                    let kind_opt: Option<MemoryKind> = match kind_str {
+                        Some(k) => Some(k.parse()?),
+                        None => None,
+                    };
+
+                    let embedder = CandleBertEmbedder::new_offline();
+                    let query_emb = embedder.embed(question).await.ok();
+                    let memories = st
+                        .recall_memories(query_emb.as_deref(), kind_opt, &[], None, 5)
+                        .await?;
+
+                    let active_rules = st.list_active_rules().await?;
+                    let rule_strings: Vec<String> = active_rules
+                        .into_iter()
+                        .map(|r| {
+                            format!(
+                                "[{}] {}: {}",
+                                r.kind.as_str().to_uppercase(),
+                                r.title,
+                                r.content
+                            )
+                        })
+                        .collect();
+
+                    let mut code_snippets = Vec::new();
+                    let query = SearchQuery {
+                        text: question.to_string(),
+                        embedding: query_emb,
+                        limit: 3,
+                        language: None,
+                    };
+                    if let Ok(hits) = st.search(&query).await {
+                        for hit in hits {
+                            code_snippets.push(format!(
+                                "File: {} (L{}-L{})\n{}",
+                                hit.file_path, hit.start_line, hit.end_line, hit.text
+                            ));
+                        }
+                    }
+
+                    let answer = oxide_core::answer::AnswerSynthesizer::answer(
+                        question,
+                        &memories,
+                        &rule_strings,
+                        &code_snippets,
+                        budget,
+                    );
+
+                    let mut full_ans = answer.answer;
+                    if !answer.citations.is_empty() {
+                        full_ans.push_str("\n\n📚 Grounded Citations:\n");
+                        for c in answer.citations {
+                            full_ans.push_str(&format!(
+                                "- [{}] {} (`{}`)\n",
+                                c.source_type.to_uppercase(),
+                                c.title,
+                                c.source_id
+                            ));
+                        }
+                    }
+
+                    Ok(full_ans)
+                } else {
+                    Err(OxideError::Config("Oxide database not found.".into()))
+                }
+            }
+
+            "oxide_distill" => {
+                let commits = args
+                    .get("commits")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("HEAD~10..HEAD");
+                let save = args.get("save").and_then(|v| v.as_bool()).unwrap_or(true);
+
+                let manifest =
+                    oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_root)
+                        .map(|m| m.project_id)
+                        .unwrap_or_else(|_| ProjectId::new_v7());
+
+                let output = std::process::Command::new("git")
+                    .arg("-C")
+                    .arg(&self.workspace_root)
+                    .arg("log")
+                    .arg(commits)
+                    .arg("--pretty=format:%h|%an|%s%n%b%n---COMMIT_END---")
+                    .output()
+                    .map_err(|e| OxideError::Config(format!("Failed to run git log: {e}")))?;
+
+                if !output.status.success() {
+                    return Ok("Git command failed or not a git repository.".into());
+                }
+
+                let log_str = String::from_utf8_lossy(&output.stdout);
+                let distilled =
+                    oxide_core::distiller::MemoryDistiller::distill_git_log(manifest, &log_str);
+
+                if distilled.is_empty() {
+                    return Ok("No conventional commit patterns detected in range.".into());
+                }
+
+                if save && let Some(st) = store {
+                    for mem in &distilled {
+                        st.upsert_memory(mem, None).await?;
+                    }
+                }
+
+                let mut out = format!(
+                    "🔍 Distilled {} memories from git range `{}`:\n\n",
+                    distilled.len(),
+                    commits
+                );
+                for (i, m) in distilled.iter().enumerate() {
+                    out.push_str(&format!(
+                        "{}. [{}] **{}**\n   {}\n\n",
+                        i + 1,
+                        m.kind.as_str().to_uppercase(),
+                        m.title,
+                        m.content
+                    ));
+                }
+
+                Ok(out)
+            }
+
+            "oxide_sync_memories" => {
+                if let Some(st) = store {
+                    let direction = args
+                        .get("direction")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("bidirectional");
+                    let memories_dir = self.workspace_root.join(".oxide").join("memories");
+                    let manifest =
+                        oxide_core::manifest::OxideManifest::load_from_dir(&self.workspace_root)
+                            .map(|m| m.project_id)
+                            .unwrap_or_else(|_| ProjectId::new_v7());
+
+                    match direction {
+                        "export" => {
+                            let memories = st.list_all_memories().await?;
+                            let paths =
+                                oxide_core::markdown_sync::MarkdownMemorySync::export_to_dir(
+                                    &memories_dir,
+                                    &memories,
+                                )?;
+                            Ok(format!(
+                                "Exported {} memories across {} markdown files in `.oxide/memories/`.",
+                                memories.len(),
+                                paths.len()
+                            ))
+                        }
+                        "import" => {
+                            let mut total = 0;
+                            if memories_dir.exists() {
+                                for entry in std::fs::read_dir(&memories_dir)? {
+                                    let entry = entry?;
+                                    let path = entry.path();
+                                    if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                                        let records = oxide_core::markdown_sync::MarkdownMemorySync::import_from_file(manifest.clone(), &path)?;
+                                        total += records.len();
+                                        st.sync_all_memories(&records).await?;
+                                    }
+                                }
+                            }
+                            Ok(format!(
+                                "Imported {} memory records from `.oxide/memories/`.",
+                                total
+                            ))
+                        }
+                        "bidirectional" | _ => {
+                            let mut imported = Vec::new();
+                            if memories_dir.exists() {
+                                for entry in std::fs::read_dir(&memories_dir)? {
+                                    let entry = entry?;
+                                    let path = entry.path();
+                                    if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                                        if let Ok(records) = oxide_core::markdown_sync::MarkdownMemorySync::import_from_file(manifest.clone(), &path) {
+                                            imported.extend(records);
+                                        }
+                                    }
+                                }
+                                if !imported.is_empty() {
+                                    st.sync_all_memories(&imported).await?;
+                                }
+                            }
+                            let all = st.list_all_memories().await?;
+                            let paths =
+                                oxide_core::markdown_sync::MarkdownMemorySync::export_to_dir(
+                                    &memories_dir,
+                                    &all,
+                                )?;
+                            Ok(format!(
+                                "Bidirectionally synchronized {} memories across {} files in `.oxide/memories/`.",
+                                all.len(),
+                                paths.len()
+                            ))
+                        }
                     }
                 } else {
                     Err(OxideError::Config("Oxide database not found.".into()))

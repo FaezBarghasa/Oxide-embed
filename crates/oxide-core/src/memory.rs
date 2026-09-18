@@ -155,8 +155,18 @@ pub struct MemoryRecord {
     pub symbol_ref: Option<String>,
     pub status: MemoryStatus,
     pub superseded_by: Option<MemoryId>,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default = "default_confidence")]
+    pub confidence: f32,
+    #[serde(default)]
+    pub source_hash: Option<String>,
     pub created_at: DateTime<Utc>,
     pub valid_until: Option<DateTime<Utc>>,
+}
+
+fn default_confidence() -> f32 {
+    1.0
 }
 
 impl MemoryRecord {
@@ -177,6 +187,9 @@ impl MemoryRecord {
             symbol_ref: None,
             status: MemoryStatus::Active,
             superseded_by: None,
+            author: None,
+            confidence: 1.0,
+            source_hash: None,
             created_at: Utc::now(),
             valid_until: None,
         }

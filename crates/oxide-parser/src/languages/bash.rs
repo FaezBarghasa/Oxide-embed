@@ -52,6 +52,10 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
             signature,
             doc: None,
             fingerprint,
+            is_macro_node: false,
+            parent_id: None,
+            breadcrumbs: vec![name.to_string()],
+            summary: None,
         });
     }
 

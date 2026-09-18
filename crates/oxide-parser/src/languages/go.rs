@@ -69,6 +69,33 @@ fn traverse_node(
         );
         let symbol_id = SymbolId::new(file_id, &qualified_name);
 
+        let is_macro = matches!(
+            kind,
+            SymbolKind::Struct
+                | SymbolKind::Module
+                | SymbolKind::Interface
+                | SymbolKind::Class
+        );
+
+        let mut breadcrumbs = Vec::new();
+        if let Some(scope) = &parent_scope {
+            breadcrumbs.push(scope.to_string());
+        }
+        breadcrumbs.push(name.to_string());
+
+        let parent_id = parent_scope.map(|scope| SymbolId::new(file_id, scope));
+        let summary = if is_macro {
+            Some(format!(
+                "{} {} defined at lines {}-{}",
+                kind.as_str(),
+                qualified_name,
+                start_point.row + 1,
+                end_point.row + 1
+            ))
+        } else {
+            None
+        };
+
         symbols.push(SymbolRecord {
             id: symbol_id,
             file_id: file_id.clone(),
@@ -80,6 +107,10 @@ fn traverse_node(
             signature,
             doc: None,
             fingerprint,
+            is_macro_node: is_macro,
+            parent_id,
+            breadcrumbs,
+            summary,
         });
     }
 

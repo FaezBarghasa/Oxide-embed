@@ -68,9 +68,19 @@ struct MemoryRow {
     symbol_ref: Option<String>,
     status: String,
     superseded_by: Option<String>,
+    #[serde(default)]
+    author: Option<String>,
+    #[serde(default = "default_row_confidence")]
+    confidence: f32,
+    #[serde(default)]
+    source_hash: Option<String>,
     embedding: Option<Vec<f32>>,
     created_at: DateTime<Utc>,
     valid_until: Option<DateTime<Utc>>,
+}
+
+fn default_row_confidence() -> f32 {
+    1.0
 }
 
 impl MemoryRow {
@@ -110,6 +120,9 @@ impl MemoryRow {
             symbol_ref: self.symbol_ref,
             status,
             superseded_by: self.superseded_by.map(MemoryId::from_string),
+            author: self.author,
+            confidence: self.confidence,
+            source_hash: self.source_hash,
             created_at: self.created_at,
             valid_until: self.valid_until,
         })
@@ -354,6 +367,9 @@ impl ProjectStore for SurrealProjectStore {
                 symbol_ref = $symbol_ref,
                 status = $status,
                 superseded_by = $superseded_by,
+                author = $author,
+                confidence = $confidence,
+                source_hash = $source_hash,
                 embedding = $embedding,
                 created_at = $created_at,
                 valid_until = $valid_until;
@@ -374,6 +390,9 @@ impl ProjectStore for SurrealProjectStore {
                 "superseded_by",
                 memory.superseded_by.as_ref().map(|s| s.0.clone()),
             ))
+            .bind(("author", memory.author.clone()))
+            .bind(("confidence", memory.confidence))
+            .bind(("source_hash", memory.source_hash.clone()))
             .bind(("embedding", embedding))
             .bind(("created_at", memory.created_at))
             .bind(("valid_until", memory.valid_until))
@@ -492,6 +511,24 @@ impl ProjectStore for SurrealProjectStore {
             .map_err(|e| OxideError::Database(e.to_string()))?;
         let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
         rows.into_iter().map(|r| r.into_memory_record()).collect()
+    }
+
+    async fn list_all_memories(&self) -> Result<Vec<MemoryRecord>> {
+        let sql = "SELECT * FROM memory_record ORDER BY created_at DESC LIMIT 1000;";
+        let mut res = self
+            .db
+            .query(sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
+        rows.into_iter().map(|r| r.into_memory_record()).collect()
+    }
+
+    async fn sync_all_memories(&self, memories: &[MemoryRecord]) -> Result<()> {
+        for mem in memories {
+            self.upsert_memory(mem, None).await?;
+        }
+        Ok(())
     }
 
     async fn link_memory_to_symbol(

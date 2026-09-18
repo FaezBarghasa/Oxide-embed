@@ -46,6 +46,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("c_struct:{}:{}", name, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![name.to_string()],
+                        summary: Some(format!("struct {} at line {}", name, line_no)),
                     });
                 } else if trimmed.starts_with("class ") && trimmed.contains('{') {
                     let name = trimmed
@@ -67,6 +71,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("cpp_class:{}:{}", name, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![name.to_string()],
+                        summary: Some(format!("class {} at line {}", name, line_no)),
                     });
                 } else if trimmed.starts_with("enum ") && trimmed.contains('{') {
                     let name = trimmed
@@ -87,6 +95,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("c_enum:{}:{}", name, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![name.to_string()],
+                        summary: Some(format!("enum {} at line {}", name, line_no)),
                     });
                 } else if trimmed.starts_with("#define ") {
                     let parts: Vec<&str> = trimmed.split_whitespace().collect();
@@ -103,6 +115,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                             signature: Some(trimmed.to_string()),
                             doc: None,
                             fingerprint: format!("c_macro:{}:{}", name, line_no),
+                            is_macro_node: false,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: None,
                         });
                     }
                 } else if (trimmed.contains('(') && trimmed.ends_with(')'))
@@ -129,6 +145,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                                 signature: Some(trimmed.to_string()),
                                 doc: None,
                                 fingerprint: format!("c_func:{}:{}", clean_name, line_no),
+                                is_macro_node: false,
+                                parent_id: None,
+                                breadcrumbs: vec![clean_name.to_string()],
+                                summary: None,
                             });
                         }
                     }
@@ -158,6 +178,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("slint:{}:{}", name_clean, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![name_clean.to_string()],
+                        summary: Some(format!("Slint component {} at line {}", name_clean, line_no)),
                     });
                 } else if trimmed.starts_with("export struct ") || trimmed.starts_with("struct ") {
                     let parts: Vec<&str> = trimmed.split_whitespace().collect();
@@ -180,6 +204,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("slint_struct:{}:{}", name_clean, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![name_clean.to_string()],
+                        summary: Some(format!("Slint struct {} at line {}", name_clean, line_no)),
                     });
                 }
             }
@@ -201,6 +229,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                     signature: Some(trimmed.to_string()),
                     doc: None,
                     fingerprint: format!("md_h:{}:{}", heading_text, line_no),
+                    is_macro_node: heading_level <= 2,
+                    parent_id: None,
+                    breadcrumbs: vec![heading_text.to_string()],
+                    summary: Some(format!("Heading {} at line {}", heading_text, line_no)),
                 });
             }
 
@@ -220,6 +252,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                         signature: Some(trimmed.to_string()),
                         doc: None,
                         fingerprint: format!("docker:{}:{}", trimmed, line_no),
+                        is_macro_node: true,
+                        parent_id: None,
+                        breadcrumbs: vec![trimmed.to_string()],
+                        summary: Some(format!("Docker stage at line {}", line_no)),
                     });
                 }
             }
@@ -240,6 +276,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                     signature: Some(trimmed.to_string()),
                     doc: None,
                     fingerprint: format!("gradle:{}:{}", trimmed, line_no),
+                    is_macro_node: false,
+                    parent_id: None,
+                    breadcrumbs: vec![trimmed.to_string()],
+                    summary: None,
                 });
             }
 
@@ -263,6 +303,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                     signature: Some(trimmed.to_string()),
                     doc: None,
                     fingerprint: format!("sec:{}:{}", section_name, line_no),
+                    is_macro_node: true,
+                    parent_id: None,
+                    breadcrumbs: vec![section_name.to_string()],
+                    summary: Some(format!("Section [{}] at line {}", section_name, line_no)),
                 });
             }
         }

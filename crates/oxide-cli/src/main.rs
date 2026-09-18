@@ -6,10 +6,11 @@ mod watcher;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{
-    handle_callees, handle_callers, handle_conflicts, handle_consolidate, handle_context,
-    handle_doctor, handle_explain, handle_export, handle_handoff, handle_impact, handle_import,
-    handle_index, handle_init, handle_install_hook, handle_memify, handle_outline, handle_read,
-    handle_recall, handle_remember, handle_report, handle_run, handle_search, handle_tokenmap,
+    handle_answer, handle_callees, handle_callers, handle_conflicts, handle_consolidate,
+    handle_context, handle_distill, handle_doctor, handle_explain, handle_export, handle_handoff,
+    handle_impact, handle_import, handle_index, handle_init, handle_install_hook, handle_memify,
+    handle_outline, handle_read, handle_recall, handle_remember, handle_report, handle_run,
+    handle_search, handle_sync_notes, handle_tokenmap,
 };
 use mcp::McpServer;
 use std::env;
@@ -96,6 +97,17 @@ async fn main() -> ExitCode {
             .await
         }
         Commands::Conflicts => handle_conflicts(project_root).await,
+        Commands::Answer {
+            question,
+            kind,
+            budget,
+        } => handle_answer(project_root, &question, kind.as_deref(), budget).await,
+        Commands::Distill { commits, save } => {
+            handle_distill(project_root, commits.as_deref(), save).await
+        }
+        Commands::SyncNotes { direction } => {
+            handle_sync_notes(project_root, direction.as_deref()).await
+        }
         Commands::Mcp => {
             let server = McpServer::new(project_root);
             server.run_stdio().await

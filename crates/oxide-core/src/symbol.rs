@@ -52,6 +52,29 @@ pub struct SymbolRecord {
     pub signature: Option<String>,
     pub doc: Option<String>,
     pub fingerprint: String,
+    // STAIR (Structure-Aware Information Retriever) Hierarchy Fields
+    #[serde(default)]
+    pub is_macro_node: bool,
+    #[serde(default)]
+    pub parent_id: Option<SymbolId>,
+    #[serde(default)]
+    pub breadcrumbs: Vec<String>,
+    #[serde(default)]
+    pub summary: Option<String>,
+}
+
+/// Structural search hit returned by STAIR hierarchical retrieval
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StairHit {
+    pub breadcrumbs: Vec<String>,
+    pub leaf_symbol: String,
+    pub signature: Option<String>,
+    pub file_path: String,
+    pub start_line: usize,
+    pub end_line: usize,
+    pub code_body: String,
+    pub confidence: f32,
+    pub macro_parent: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
