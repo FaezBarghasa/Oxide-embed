@@ -54,7 +54,7 @@ impl Default for EmbeddingSection {
             file: "Qwen3-Embedding-0.6B-Q4_K_M.gguf".to_string(),
             device: "auto".to_string(),
             max_seq_len: 1024,
-            batch_size: 4,
+            batch_size: 32,
         }
     }
 }

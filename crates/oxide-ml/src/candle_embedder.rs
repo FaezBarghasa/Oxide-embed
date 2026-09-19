@@ -19,13 +19,18 @@ pub struct CandleBertEmbedder {
 
 impl CandleBertEmbedder {
     pub fn new_offline() -> Self {
-        if let Ok(embedder) = Self::load_default() {
+        Self::new_offline_with_device("auto")
+    }
+
+    pub fn new_offline_with_device(device_pref: &str) -> Self {
+        if let Ok(embedder) = Self::load_default_with_device(device_pref) {
             embedder
         } else {
+            let device = select_device(device_pref);
             Self {
                 model: None,
                 tokenizer: None,
-                device: select_device("auto"),
+                device,
                 fallback: MockEmbedder::new(384),
                 dimension: 384,
             }
@@ -33,13 +38,17 @@ impl CandleBertEmbedder {
     }
 
     pub fn load_default() -> Result<Self> {
+        Self::load_default_with_device("auto")
+    }
+
+    pub fn load_default_with_device(device_pref: &str) -> Result<Self> {
         let base_dir = crate::model::ModelManager::default_models_dir()?.join("bge-small-en-v1.5");
         let weights = base_dir.join("model.safetensors");
         let config = base_dir.join("config.json");
         let tokenizer = base_dir.join("tokenizer.json");
 
         if weights.exists() && config.exists() && tokenizer.exists() {
-            Self::load(weights, config, tokenizer)
+            Self::load_with_device(weights, config, tokenizer, device_pref)
         } else {
             Err(OxideError::Ml(format!(
                 "Default model files not found in {}",
@@ -53,7 +62,16 @@ impl CandleBertEmbedder {
         config_path: P,
         tokenizer_path: P,
     ) -> Result<Self> {
-        let device = select_device("auto");
+        Self::load_with_device(weights_path, config_path, tokenizer_path, "auto")
+    }
+
+    pub fn load_with_device<P: AsRef<Path>>(
+        weights_path: P,
+        config_path: P,
+        tokenizer_path: P,
+        device_pref: &str,
+    ) -> Result<Self> {
+        let device = select_device(device_pref);
         let config_str = std::fs::read_to_string(config_path.as_ref())
             .map_err(|e| OxideError::Ml(format!("Failed to read BERT config: {e}")))?;
         let config: Config = serde_json::from_str(&config_str)
@@ -84,62 +102,111 @@ impl CandleBertEmbedder {
             dimension,
         })
     }
+
+    pub fn device(&self) -> &Device {
+        &self.device
+    }
 }
 
 #[async_trait]
 impl Embedder for CandleBertEmbedder {
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        if let (Some(model), Some(tokenizer)) = (&self.model, &self.tokenizer) {
-            let tokens = tokenizer
-                .encode(text, true)
-                .map_err(|e| OxideError::Ml(format!("Tokenizer error: {e}")))?;
-            let raw_token_ids = tokens.get_ids();
-            let token_ids = &raw_token_ids[..raw_token_ids.len().min(512)];
-            let input_ids = Tensor::new(token_ids, &self.device)
-                .map_err(|e| OxideError::Ml(e.to_string()))?
-                .unsqueeze(0)
-                .map_err(|e| OxideError::Ml(e.to_string()))?;
-            let token_type_ids = input_ids
-                .zeros_like()
-                .map_err(|e| OxideError::Ml(e.to_string()))?;
-
-            let embeddings = model
-                .forward(&input_ids, &token_type_ids, None)
-                .map_err(|e| OxideError::Ml(format!("Bert forward error: {e}")))?;
-
-            // Mean pooling over token sequence
-            let (_b, seq_len, _h) = embeddings
-                .dims3()
-                .map_err(|e| OxideError::Ml(e.to_string()))?;
-            let mean = (embeddings
-                .sum(1)
-                .map_err(|e| OxideError::Ml(e.to_string()))?
-                / (seq_len as f64))
-                .map_err(|e| OxideError::Ml(e.to_string()))?;
-            let vec: Vec<f32> = mean
-                .squeeze(0)
-                .map_err(|e| OxideError::Ml(e.to_string()))?
-                .to_vec1()
-                .map_err(|e| OxideError::Ml(e.to_string()))?;
-
-            // L2 normalize
-            let norm: f32 = vec.iter().map(|x| x * x).sum::<f32>().sqrt();
-            if norm > 0.0 {
-                Ok(vec.into_iter().map(|x| x / norm).collect())
-            } else {
-                Ok(vec)
-            }
-        } else {
-            self.fallback.embed(text).await
-        }
+        let mut results = self.embed_batch(&[text.to_string()]).await?;
+        results
+            .pop()
+            .ok_or_else(|| OxideError::Ml("Empty embedding result".into()))
     }
 
     async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
-        let mut results = Vec::with_capacity(texts.len());
-        for text in texts {
-            results.push(self.embed(text).await?);
+        if texts.is_empty() {
+            return Ok(Vec::new());
         }
-        Ok(results)
+
+        let (Some(model), Some(tokenizer)) = (&self.model, &self.tokenizer) else {
+            let mut results = Vec::with_capacity(texts.len());
+            for text in texts {
+                results.push(self.fallback.embed(text).await?);
+            }
+            return Ok(results);
+        };
+
+        let batch_size = texts.len();
+        let encodings = tokenizer
+            .encode_batch(texts.to_vec(), true)
+            .map_err(|e| OxideError::Ml(format!("Batch tokenization error: {e}")))?;
+
+        let mut actual_token_lengths = Vec::with_capacity(batch_size);
+        let mut max_seq_len = 1;
+        for encoding in &encodings {
+            let len = encoding.get_ids().len().min(512).max(1);
+            actual_token_lengths.push(len);
+            if len > max_seq_len {
+                max_seq_len = len;
+            }
+        }
+
+        let mut all_ids = Vec::with_capacity(batch_size * max_seq_len);
+        let mut all_masks = Vec::with_capacity(batch_size * max_seq_len);
+        for (encoding, &actual_len) in encodings.iter().zip(actual_token_lengths.iter()) {
+            let ids = encoding.get_ids();
+            for i in 0..actual_len {
+                all_ids.push(ids[i]);
+                all_masks.push(1u32);
+            }
+            for _ in actual_len..max_seq_len {
+                all_ids.push(0); // Pad token ID
+                all_masks.push(0u32);
+            }
+        }
+
+        let input_ids = Tensor::from_vec(all_ids, (batch_size, max_seq_len), &self.device)
+            .map_err(|e| OxideError::Ml(format!("Tensor creation error: {e}")))?;
+        let token_type_ids = input_ids
+            .zeros_like()
+            .map_err(|e| OxideError::Ml(format!("Token type ids error: {e}")))?;
+        let attention_mask = Tensor::from_vec(all_masks, (batch_size, max_seq_len), &self.device)
+            .map_err(|e| OxideError::Ml(format!("Attention mask error: {e}")))?;
+
+        let embeddings = model
+            .forward(&input_ids, &token_type_ids, Some(&attention_mask))
+            .map_err(|e| OxideError::Ml(format!("BERT forward error: {e}")))?;
+
+        let (_b, seq_len, hidden_size) = embeddings
+            .dims3()
+            .map_err(|e| OxideError::Ml(format!("Embedding shape error: {e}")))?;
+
+        let flat_embeddings = embeddings
+            .to_dtype(candle_core::DType::F32)
+            .map_err(|e| OxideError::Ml(e.to_string()))?
+            .flatten_all()
+            .map_err(|e| OxideError::Ml(e.to_string()))?
+            .to_vec1::<f32>()
+            .map_err(|e| OxideError::Ml(e.to_string()))?;
+
+        let mut output = Vec::with_capacity(batch_size);
+        for (b, &token_count) in actual_token_lengths.iter().enumerate() {
+            let mut pooled = vec![0.0f32; hidden_size];
+            for t in 0..token_count {
+                let offset = (b * seq_len + t) * hidden_size;
+                for h in 0..hidden_size {
+                    pooled[h] += flat_embeddings[offset + h];
+                }
+            }
+            let denom = token_count as f32;
+            for h in 0..hidden_size {
+                pooled[h] /= denom;
+            }
+
+            // L2 normalize
+            let norm: f32 = pooled.iter().map(|x| x * x).sum::<f32>().sqrt();
+            if norm > 0.0 {
+                output.push(pooled.into_iter().map(|x| x / norm).collect());
+            } else {
+                output.push(pooled);
+            }
+        }
+
+        Ok(output)
     }
 
     fn dimension(&self) -> usize {

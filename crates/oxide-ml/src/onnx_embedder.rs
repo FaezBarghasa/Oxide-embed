@@ -16,11 +16,56 @@ pub struct OnnxGemmaEmbedder {
 
 impl OnnxGemmaEmbedder {
     pub fn load<P: AsRef<Path>>(model_path: P, tokenizer_path: P) -> Result<Self> {
+        Self::load_with_device(model_path, tokenizer_path, "auto")
+    }
+
+    pub fn load_with_device<P: AsRef<Path>>(
+        model_path: P,
+        tokenizer_path: P,
+        device_pref: &str,
+    ) -> Result<Self> {
         let tokenizer = Tokenizer::from_file(tokenizer_path.as_ref())
             .map_err(|e| OxideError::Ml(format!("Failed to load Gemma tokenizer: {e}")))?;
 
-        let session = Session::builder()
-            .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?
+        let mut builder = Session::builder()
+            .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+
+        let _pref = device_pref.trim().to_lowercase();
+        #[cfg(feature = "cuda")]
+        if _pref == "auto" || _pref.starts_with("cuda") || _pref == "gpu" {
+            match builder.with_execution_providers([ort::ep::CUDA::default().build()]) {
+                Ok(b) => builder = b,
+                Err(err) => {
+                    tracing::warn!("CUDA execution provider failed: {err}; using CPU fallback");
+                    builder = Session::builder()
+                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                }
+            }
+        }
+        #[cfg(feature = "rocm")]
+        if pref == "auto" || pref == "rocm" {
+            match builder.with_execution_providers([ort::ep::ROCm::default().build()]) {
+                Ok(b) => builder = b,
+                Err(err) => {
+                    tracing::warn!("ROCm execution provider failed: {err}; using CPU fallback");
+                    builder = Session::builder()
+                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                }
+            }
+        }
+        #[cfg(feature = "metal")]
+        if pref == "auto" || pref == "metal" {
+            match builder.with_execution_providers([ort::ep::CoreML::default().build()]) {
+                Ok(b) => builder = b,
+                Err(err) => {
+                    tracing::warn!("CoreML execution provider failed: {err}; using CPU fallback");
+                    builder = Session::builder()
+                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                }
+            }
+        }
+
+        let session = builder
             .commit_from_file(model_path.as_ref())
             .map_err(|e| OxideError::Ml(format!("Failed to load ONNX model: {e}")))?;
 
@@ -32,13 +77,17 @@ impl OnnxGemmaEmbedder {
     }
 
     pub fn load_default() -> Result<Self> {
+        Self::load_default_with_device("auto")
+    }
+
+    pub fn load_default_with_device(device_pref: &str) -> Result<Self> {
         let base_dir =
             crate::model::ModelManager::default_models_dir()?.join("embeddinggemma-300m");
         let model_path = base_dir.join("model_q4.onnx");
         let tokenizer_path = base_dir.join("tokenizer.json");
 
         if model_path.exists() && tokenizer_path.exists() {
-            Self::load(model_path, tokenizer_path)
+            Self::load_with_device(model_path, tokenizer_path, device_pref)
         } else {
             Err(OxideError::Ml(format!(
                 "EmbeddingGemma-300M ONNX model not found in {}",

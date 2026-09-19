@@ -36,6 +36,10 @@ pub enum Commands {
     Index {
         #[arg(long, help = "Force re-index all files even if unchanged")]
         force: bool,
+        #[arg(long, help = "Compute device preference (auto, cuda, metal, rocm, cpu)")]
+        device: Option<String>,
+        #[arg(long, help = "Embedding batch size")]
+        batch_size: Option<usize>,
     },
 
     #[command(
@@ -44,6 +48,10 @@ pub enum Commands {
     Cognify {
         #[arg(long, help = "Force full re-cognify")]
         force: bool,
+        #[arg(long, help = "Compute device preference (auto, cuda, metal, rocm, cpu)")]
+        device: Option<String>,
+        #[arg(long, help = "Embedding batch size")]
+        batch_size: Option<usize>,
     },
 
     #[command(about = "Show AST outline for a file without reading full content")]

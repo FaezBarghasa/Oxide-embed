@@ -24,8 +24,20 @@ ort = "2.0.0-rc.13"
 ndarray = "0.17"
 
 [features]
-cuda = ["candle-core/cuda"]
-metal = ["candle-core/metal"]
+default = []
+cuda = [
+    "candle-core/cuda",
+    "candle-nn/cuda",
+    "candle-transformers/cuda",
+    "ort/cuda",
+]
+metal = [
+    "candle-core/metal",
+    "candle-nn/metal",
+    "candle-transformers/metal",
+    "ort/coreml",
+]
+rocm = ["ort/rocm"]
 
 [dev-dependencies]
 criterion.workspace = true

@@ -105,3 +105,30 @@ async fn test_candle_qwen_embedder() {
         assert!(sim_diff < 0.99);
     }
 }
+
+#[tokio::test]
+async fn test_batched_embedding_parity() {
+    let embedder = CandleBertEmbedder::new_offline();
+    let text1 = "function calculate_sum(a, b) { return a + b; }".to_string();
+    let text2 = "struct ProjectStoreEngine;".to_string();
+    let text3 = "impl ProjectWalker for LocalFileSystem {}".to_string();
+
+    let single1 = embedder.embed(&text1).await.expect("embed single 1");
+    let single2 = embedder.embed(&text2).await.expect("embed single 2");
+    let single3 = embedder.embed(&text3).await.expect("embed single 3");
+
+    let batch = embedder
+        .embed_batch(&[text1, text2, text3])
+        .await
+        .expect("embed batch");
+    assert_eq!(batch.len(), 3);
+
+    let sim1 = cosine_similarity(&single1, &batch[0]);
+    let sim2 = cosine_similarity(&single2, &batch[1]);
+    let sim3 = cosine_similarity(&single3, &batch[2]);
+
+    assert!(sim1 > 0.999, "batch item 0 similarity was {sim1}");
+    assert!(sim2 > 0.999, "batch item 1 similarity was {sim2}");
+    assert!(sim3 > 0.999, "batch item 2 similarity was {sim3}");
+}
+

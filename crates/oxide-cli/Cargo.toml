@@ -27,3 +27,9 @@ uuid.workspace = true
 notify.workspace = true
 sha2.workspace = true
 walkdir.workspace = true
+
+[features]
+default = []
+cuda = ["oxide-ml/cuda"]
+metal = ["oxide-ml/metal"]
+rocm = ["oxide-ml/rocm"]

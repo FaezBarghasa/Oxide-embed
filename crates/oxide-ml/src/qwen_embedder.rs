@@ -6,9 +6,8 @@ use candle_nn::VarBuilder;
 use candle_transformers::models::qwen2::{Config, ModelForCausalLM};
 use oxide_core::error::{OxideError, Result};
 use std::path::Path;
-use tokenizers::Tokenizer;
-
 use std::sync::Mutex;
+use tokenizers::Tokenizer;
 
 pub struct CandleQwenEmbedder {
     model: Mutex<ModelForCausalLM>,
@@ -23,7 +22,16 @@ impl CandleQwenEmbedder {
         config_path: P,
         tokenizer_path: P,
     ) -> Result<Self> {
-        let device = select_device("auto");
+        Self::load_with_device(weights_path, config_path, tokenizer_path, "auto")
+    }
+
+    pub fn load_with_device<P: AsRef<Path>>(
+        weights_path: P,
+        config_path: P,
+        tokenizer_path: P,
+        device_pref: &str,
+    ) -> Result<Self> {
+        let device = select_device(device_pref);
         let config_str = std::fs::read_to_string(config_path.as_ref())
             .map_err(|e| OxideError::Ml(format!("Failed to read Qwen config: {e}")))?;
         let config: Config = serde_json::from_str(&config_str)
@@ -55,6 +63,10 @@ impl CandleQwenEmbedder {
     }
 
     pub fn load_default() -> Result<Self> {
+        Self::load_default_with_device("auto")
+    }
+
+    pub fn load_default_with_device(device_pref: &str) -> Result<Self> {
         let base_dir =
             crate::model::ModelManager::default_models_dir()?.join("qwen3-embedding-0.6b");
         let weights = base_dir.join("model.safetensors");
@@ -62,7 +74,7 @@ impl CandleQwenEmbedder {
         let tokenizer = base_dir.join("tokenizer.json");
 
         if weights.exists() && config.exists() && tokenizer.exists() {
-            Self::load(weights, config, tokenizer)
+            Self::load_with_device(weights, config, tokenizer, device_pref)
         } else {
             Err(OxideError::Ml(format!(
                 "Qwen3-Embedding-0.6B model not found in {}",
@@ -70,22 +82,54 @@ impl CandleQwenEmbedder {
             )))
         }
     }
+
+    pub fn device(&self) -> &Device {
+        &self.device
+    }
 }
 
 #[async_trait]
 impl Embedder for CandleQwenEmbedder {
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        let tokens = self
-            .tokenizer
-            .encode(text, true)
-            .map_err(|e| OxideError::Ml(format!("Qwen tokenizer error: {e}")))?;
-        let raw_token_ids = tokens.get_ids();
-        let token_ids = &raw_token_ids[..raw_token_ids.len().min(2048)];
-        let seq_len = token_ids.len().max(1);
+        let mut results = self.embed_batch(&[text.to_string()]).await?;
+        results
+            .pop()
+            .ok_or_else(|| OxideError::Ml("Empty embedding result".into()))
+    }
 
-        let input_ids = Tensor::new(token_ids, &self.device)
-            .map_err(|e| OxideError::Ml(e.to_string()))?
-            .unsqueeze(0)
+    async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let batch_size = texts.len();
+        let encodings = self
+            .tokenizer
+            .encode_batch(texts.to_vec(), true)
+            .map_err(|e| OxideError::Ml(format!("Qwen tokenizer error: {e}")))?;
+
+        let mut actual_token_lengths = Vec::with_capacity(batch_size);
+        let mut max_seq_len = 1;
+        for encoding in &encodings {
+            let len = encoding.get_ids().len().min(2048).max(1);
+            actual_token_lengths.push(len);
+            if len > max_seq_len {
+                max_seq_len = len;
+            }
+        }
+
+        let mut all_ids = Vec::with_capacity(batch_size * max_seq_len);
+        for (encoding, &actual_len) in encodings.iter().zip(actual_token_lengths.iter()) {
+            let ids = encoding.get_ids();
+            for i in 0..actual_len {
+                all_ids.push(ids[i]);
+            }
+            for _ in actual_len..max_seq_len {
+                all_ids.push(0);
+            }
+        }
+
+        let input_ids = Tensor::from_vec(all_ids, (batch_size, max_seq_len), &self.device)
             .map_err(|e| OxideError::Ml(e.to_string()))?;
 
         // Forward through Qwen causal model
@@ -98,35 +142,44 @@ impl Embedder for CandleQwenEmbedder {
             .forward(&input_ids, 0)
             .map_err(|e| OxideError::Ml(format!("Qwen forward error: {e}")))?;
 
-        // Mean pool across sequence dimension
-        let mean = (logits.sum(1).map_err(|e| OxideError::Ml(e.to_string()))? / (seq_len as f64))
-            .map_err(|e| OxideError::Ml(e.to_string()))?;
+        let (_b, seq_len, hidden_size) = logits
+            .dims3()
+            .map_err(|e| OxideError::Ml(format!("Qwen logits shape error: {e}")))?;
 
-        let vec: Vec<f32> = mean
-            .squeeze(0)
+        let flat = logits
+            .to_dtype(candle_core::DType::F32)
             .map_err(|e| OxideError::Ml(e.to_string()))?
-            .to_vec1()
+            .flatten_all()
+            .map_err(|e| OxideError::Ml(e.to_string()))?
+            .to_vec1::<f32>()
             .map_err(|e| OxideError::Ml(e.to_string()))?;
 
-        // Truncate/slice to embedding dimension if logits projection differs
-        let dim = self.dimension.min(vec.len());
-        let slice = &vec[..dim];
+        let dim = self.dimension.min(hidden_size);
+        let mut output = Vec::with_capacity(batch_size);
 
-        // L2 normalize
-        let norm: f32 = slice.iter().map(|x| x * x).sum::<f32>().sqrt();
-        if norm > 0.0 {
-            Ok(slice.iter().map(|x| x / norm).collect())
-        } else {
-            Ok(slice.to_vec())
-        }
-    }
+        for (b, &token_count) in actual_token_lengths.iter().enumerate() {
+            let mut pooled = vec![0.0f32; dim];
+            for t in 0..token_count {
+                let offset = (b * seq_len + t) * hidden_size;
+                for h in 0..dim {
+                    pooled[h] += flat[offset + h];
+                }
+            }
+            let denom = token_count as f32;
+            for h in 0..dim {
+                pooled[h] /= denom;
+            }
 
-    async fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
-        let mut results = Vec::with_capacity(texts.len());
-        for text in texts {
-            results.push(self.embed(text).await?);
+            // L2 normalize
+            let norm: f32 = pooled.iter().map(|x| x * x).sum::<f32>().sqrt();
+            if norm > 0.0 {
+                output.push(pooled.into_iter().map(|x| x / norm).collect());
+            } else {
+                output.push(pooled);
+            }
         }
-        Ok(results)
+
+        Ok(output)
     }
 
     fn dimension(&self) -> usize {
