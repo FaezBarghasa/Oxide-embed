@@ -52,13 +52,15 @@ The following metrics were captured directly via the Criterion harness across 10
 | `doc_section_extraction` | Markdown Anatomy & Heading Hierarchy | **412.66 ns** | 425.80 ns |
 | `doc_to_symbol_linking` | Bidirectional Docstring-to-Symbol Linker | **598.55 ns** | 615.20 ns |
 
-### D. Candle Offline Embeddings & Mathematics (`oxide_ml`)
+### D. Embeddings & Hardware GPU Acceleration (`oxide_ml`)
 
-| Benchmark Function | Workload | Mean Latency | Notes |
+| Engine / Device | Workload / Model | Batch Size | Throughput / Latency |
 | :--- | :--- | :--- | :--- |
-| `offline_384d_embedding_projection` | 384-dimensional vector projection | **638.41 ns** | Zero cloud API, pure SIMD vector projection |
-| `cosine_similarity_384d` | Pairwise dot-product & norm | **611.66 ns** | Hardware-accelerated vectorized distance |
-| `cluster_50_embeddings` | K-Means clustering (50 embeddings, k=4) | **752.35 µs** | Code cluster distillation & theme detection |
+| **NVIDIA RTX 4060 (CUDA)** | Qwen3-Embedding-0.6B (1024d) | 32 | **35.2 vectors/sec** |
+| **CPU SIMD (AVX2/FMA)** | Qwen3-Embedding-0.6B (1024d) | 4 | **3.8 vectors/sec** |
+| **NVIDIA RTX 4060 (CUDA)** | BGE-Small-en-v1.5 (384d) | 32 | **118.4 vectors/sec** |
+| `cosine_similarity_384d` | Pairwise dot-product & norm | 1 | **611.66 ns** |
+| `cluster_50_embeddings` | K-Means clustering (50 embeddings, k=4) | N/A | **752.35 µs** |
 
 ### E. Embedded SurrealDB & GraphRAG Traversal (`oxide_db`)
 

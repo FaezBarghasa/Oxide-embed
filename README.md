@@ -53,18 +53,24 @@ Every metric below is measured from **real bare-metal Criterion benchmark execut
 
 ---
 
-## 🧠 Production Machine Learning Models
+## 🧠 Production Machine Learning Models & GPU Acceleration
 
-Oxide-Embed supports three local embedding engines running fully offline on CPU or GPU:
+Oxide-Embed supports three local embedding engines running fully offline with native hardware acceleration across **NVIDIA CUDA**, **Apple Metal**, and **AMD ROCm**:
 
-1. **`EmbeddingGemma-300M`** (ONNX Runtime):
-   - Fast, high-accuracy 768-dimensional embeddings using ONNX Runtime.
-   - Mean-pooled with L2 normalization for semantic code search.
-2. **`Qwen3-Embedding-0.6B`** (Candle):
-   - High-precision 1024-dimensional embeddings implemented via pure `candle-core` / `candle-nn`.
-   - Thread-safe Mutex forward pass for batch and concurrent indexing.
-3. **`BGE-Small-en-v1.5`** (Candle BERT):
-   - Lightweight, ultra-fast 384-dimensional BERT embeddings with local safetensors loading.
+1. **`Qwen3-Embedding-0.6B`** (Candle / Default):
+   - High-precision 1024-dimensional embeddings implemented via `candle-core` / `candle-nn`.
+   - Native CUDA and Metal GPU acceleration with batched 2D tensor forward passes and attention masking.
+2. **`BGE-Small-en-v1.5`** (Candle BERT):
+   - Lightweight, ultra-fast 384-dimensional BERT embeddings with local safetensors loading and full GPU/CPU SIMD support.
+3. **`EmbeddingGemma-300M`** (ONNX Runtime):
+   - Fast 768-dimensional embeddings using ONNX Runtime with CUDA, ROCm, and CoreML execution providers.
+
+### Hardware Acceleration Options
+
+| Flag | Value | Description |
+| :--- | :--- | :--- |
+| `--device` | `auto` (default), `cuda`, `metal`, `rocm`, `cpu` | Selects target compute backend with automatic fallback |
+| `--batch-size`| `32` (default) | Configurable batch size for parallel tensor tokenization & embedding |
 
 ---
 
@@ -160,16 +166,16 @@ oxide-embed recall "architecture" --as-of 2026-08-01T00:00:00Z --budget 1000
 oxide-embed conflicts
 ```
 
-### 2. Workspace Indexing & Cognitive Graph
+### 2. Workspace Indexing & Cognitive Graph (GPU Accelerated)
 ```bash
 # Initialize .oxide metadata and embedded SurrealKV store
 oxide-embed init
 
-# Run full AST extraction, call graph linking, DocLinker, and Vector indexer
-oxide-embed index
+# Run GPU-accelerated AST extraction, call graph linking, and Vector indexer (auto-detects CUDA/Metal)
+oxide-embed index --device cuda --batch-size 32
 
-# Cognify workspace (Full Cognee-style GraphRAG index)
-oxide-embed cognify
+# Cognify workspace (Full Cognee-style GraphRAG index with CUDA acceleration)
+oxide-embed cognify --device cuda
 
 # Run live watcher daemon for incremental sub-millisecond re-indexing
 oxide-embed watch

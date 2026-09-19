@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2026-09-19
+
+### Added
+
+#### 1. Hardware GPU Acceleration (CUDA, Apple Metal, AMD ROCm)
+- **Multi-Backend Acceleration (`oxide-ml`)**:
+  - `cuda`: Integrated `candle-core/cuda`, `candle-nn/cuda`, `candle-transformers/cuda`, and `ort/cuda` for NVIDIA GPUs.
+  - `metal`: Integrated `candle-core/metal` and `ort/coreml` for Apple Silicon GPU / Apple Neural Engine.
+  - `rocm`: Integrated `ort/rocm` Execution Provider for AMD GPUs.
+- **Dynamic Device Selector (`oxide_ml::device`)**:
+  - Auto-probes CUDA and Metal at runtime with graceful CPU SIMD fallback.
+  - Added `--device <auto|cuda|metal|rocm|cpu>` CLI parameter to `index` and `cognify`.
+- **True Batched Tensor Forward Pass**:
+  - Replaced sequential single-item embeddings with 2D tensor batching (`tokenizer.encode_batch`), attention masking (`[B, S]`), mean pooling, and L2 normalization in Candle BERT and Qwen embedders.
+  - Added `--batch-size <N>` (default 32) parameter.
+
+---
+
 ## [0.3.0] - 2026-09-18
 
 ### Added
