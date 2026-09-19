@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `--device <auto|cuda|metal|rocm|cpu>` CLI parameter to `index` and `cognify`.
 - **True Batched Tensor Forward Pass**:
   - Replaced sequential single-item embeddings with 2D tensor batching (`tokenizer.encode_batch`), attention masking (`[B, S]`), mean pooling, and L2 normalization in Candle BERT and Qwen embedders.
-  - Added `--batch-size <N>` (default 32) parameter.
+  - Added dynamic hardware-optimal batch calculation (`optimal_batch_size`), defaulting to 64 for CUDA, 32 for Metal, and `cores * 2` for CPU SIMD, with optional `--batch-size <N>` override.
 
 ---
 

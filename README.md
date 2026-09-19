@@ -65,12 +65,22 @@ Oxide-Embed supports three local embedding engines running fully offline with na
 3. **`EmbeddingGemma-300M`** (ONNX Runtime):
    - Fast 768-dimensional embeddings using ONNX Runtime with CUDA, ROCm, and CoreML execution providers.
 
-### Hardware Acceleration Options
+### Hardware Acceleration & Dynamic Batch Sizing
 
-| Flag | Value | Description |
-| :--- | :--- | :--- |
-| `--device` | `auto` (default), `cuda`, `metal`, `rocm`, `cpu` | Selects target compute backend with automatic fallback |
-| `--batch-size`| `32` (default) | Configurable batch size for parallel tensor tokenization & embedding |
+Oxide-Embed automatically probes your system hardware at runtime and dynamically selects the maximum safe batch size:
+
+| Compute Backend | Auto-Detected Device | Dynamic Batch Size | Optimization Profile |
+| :--- | :--- | :--- | :--- |
+| **NVIDIA CUDA** | `cuda:0` / `cuda:N` | **64** | Tensor Core saturation, zero OOM risk |
+| **Apple Metal** | `metal:0` | **32** | Apple Silicon Unified Memory bandwidth |
+| **CPU SIMD** | `cpu` (AVX2/FMA/NEON) | **`cores * 2` (8–32)** | Thread-parallel work-stealing |
+
+#### Optional CLI Overrides
+
+| Flag | Values | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--device` | `auto`, `cuda`, `metal`, `rocm`, `cpu` | `auto` | Explicitly enforce compute backend with CPU fallback |
+| `--batch-size` | `<usize>` | *auto-optimal* | Override hardware-calculated batch size |
 
 ---
 
