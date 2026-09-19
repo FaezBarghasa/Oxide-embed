@@ -1,7 +1,7 @@
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
-use oxide_ml::device::device_name;
+use oxide_ml::device::{device_name, optimal_batch_size};
 use oxide_ml::{CandleBertEmbedder, Embedder};
 use oxide_parser::languages::get_extractor;
 use oxide_parser::{AnatomyScanner, Chunker, DocLinker, Language, ProjectWalker};
@@ -31,12 +31,15 @@ pub async fn handle_index(
     );
 
     let device_pref = device_override.unwrap_or(&config.embedding.device);
+    let embedder = CandleBertEmbedder::new_offline_with_device(device_pref);
+    let dev = embedder.device();
+    let dev_label = device_name(dev);
+
+    // Auto-calculate maximum optimal batch size for device if not explicitly overridden
     let batch_size = batch_size_override
-        .unwrap_or(config.embedding.batch_size)
+        .unwrap_or_else(|| optimal_batch_size(dev))
         .max(1);
 
-    let embedder = CandleBertEmbedder::new_offline_with_device(device_pref);
-    let dev_label = device_name(embedder.device());
     println!(
         "Hardware accelerator active: {} | Batch size: {}",
         dev_label, batch_size

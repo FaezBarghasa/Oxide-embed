@@ -112,3 +112,20 @@ pub fn device_name(device: &Device) -> &'static str {
         Device::Metal(_) => "metal",
     }
 }
+
+/// Computes the optimal batch size automatically based on target compute device.
+/// - CUDA: 64 (maximizes tensor core occupancy on desktop/mobile GPUs without OOM)
+/// - Metal: 32 (optimized for Apple Unified Memory bandwidth)
+/// - CPU: Derived from available logical cores (clamped between 8 and 32)
+pub fn optimal_batch_size(device: &Device) -> usize {
+    match device {
+        Device::Cuda(_) => 64,
+        Device::Metal(_) => 32,
+        Device::Cpu => {
+            let cores = std::thread::available_parallelism()
+                .map(|p| p.get())
+                .unwrap_or(4);
+            (cores * 2).clamp(8, 32)
+        }
+    }
+}
