@@ -1,4 +1,6 @@
 pub mod bash;
+pub mod c;
+pub mod cpp;
 pub mod generic;
 pub mod go;
 pub mod java;
@@ -30,6 +32,8 @@ pub trait LanguageExtractor {
 pub fn get_extractor(lang: Language) -> Option<Box<dyn LanguageExtractor + Send + Sync>> {
     match lang {
         Language::Rust => Some(Box::new(rust::RustExtractor)),
+        Language::C => Some(Box::new(c::CExtractor)),
+        Language::Cpp => Some(Box::new(cpp::CppExtractor)),
         Language::Python | Language::Mojo => Some(Box::new(python::PythonExtractor)),
         Language::JavaScript | Language::TypeScript => {
             Some(Box::new(typescript::TypeScriptExtractor))
