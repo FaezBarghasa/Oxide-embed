@@ -343,4 +343,7 @@ pub enum Commands {
         #[arg(help = "Input .oxem bundle path")]
         bundle: PathBuf,
     },
+
+    #[command(about = "Launch interactive terminal dashboard (TUI)")]
+    Tui,
 }

@@ -1,6 +1,8 @@
 mod cli;
 mod commands;
 mod mcp;
+#[cfg(feature = "tui")]
+mod tui;
 mod uds_server;
 mod watcher;
 
@@ -133,6 +135,17 @@ async fn main() -> ExitCode {
         Commands::Consolidate => handle_consolidate(project_root).await,
         Commands::Export { out } => handle_export(project_root, &out).await,
         Commands::Import { bundle } => handle_import(project_root, &bundle).await,
+        Commands::Tui => {
+            #[cfg(feature = "tui")]
+            {
+                return tui::run_tui(project_root).await;
+            }
+            #[cfg(not(feature = "tui"))]
+            {
+                eprintln!("TUI feature is not enabled in this build.");
+                return ExitCode::FAILURE;
+            }
+        }
     };
 
     if let Err(e) = result {

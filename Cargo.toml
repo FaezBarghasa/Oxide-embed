@@ -47,6 +47,10 @@ walkdir = "2.5.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 notify = "8.0.0"
 
+# TUI
+ratatui = { version = "0.29.0", default-features = false, features = ["crossterm"] }
+crossterm = { version = "0.28.1", features = ["event-stream"] }
+
 # SurrealDB
 surrealdb = { version = "3.2.4", default-features = false, features = [
     "kv-surrealkv",

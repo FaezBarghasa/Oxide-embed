@@ -27,9 +27,12 @@ uuid.workspace = true
 notify.workspace = true
 sha2.workspace = true
 walkdir.workspace = true
+ratatui = { workspace = true, optional = true }
+crossterm = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["tui"]
+tui = ["dep:ratatui", "dep:crossterm"]
 cuda = ["oxide-ml/cuda"]
 metal = ["oxide-ml/metal"]
 rocm = ["oxide-ml/rocm"]
