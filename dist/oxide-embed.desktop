@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Oxide-Embed
+Comment=Ultra-fast local-first code graph indexing, cognitive memory & MCP engine
+Exec=oxide-embed mcp
+Icon=utilities-terminal
+Terminal=true
+Type=Application
+Categories=Development;Utility;
+Keywords=rust;ast;indexing;mcp;rag;embeddings;
