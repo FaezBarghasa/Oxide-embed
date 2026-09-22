@@ -7,19 +7,24 @@ pub fn select_device(preference: &str) -> Device {
         "auto" => {
             #[cfg(feature = "cuda")]
             {
-                if let Ok(dev) = Device::new_cuda(0) {
-                    info!("Hardware acceleration: NVIDIA CUDA GPU 0 active");
-                    return dev;
+                match Device::new_cuda(0) {
+                    Ok(dev) => {
+                        println!("🚀 Hardware acceleration active: NVIDIA CUDA GPU 0 (Tensor Cores)");
+                        return dev;
+                    }
+                    Err(err) => {
+                        warn!("CUDA runtime detected but GPU init failed: {err}");
+                    }
                 }
             }
             #[cfg(feature = "metal")]
             {
                 if let Ok(dev) = Device::new_metal(0) {
-                    info!("Hardware acceleration: Apple Metal GPU active");
+                    println!("🚀 Hardware acceleration active: Apple Metal GPU");
                     return dev;
                 }
             }
-            info!("Hardware acceleration: CPU compute device active");
+            println!("⚡ Compute device: CPU (SIMD AVX2/NEON)");
             Device::Cpu
         }
         "cuda" | "gpu" => {
@@ -27,21 +32,17 @@ pub fn select_device(preference: &str) -> Device {
             {
                 match Device::new_cuda(0) {
                     Ok(dev) => {
-                        info!("Hardware acceleration: NVIDIA CUDA GPU 0 active");
+                        println!("🚀 Hardware acceleration active: NVIDIA CUDA GPU 0");
                         dev
                     }
                     Err(err) => {
-                        warn!("Failed to initialize CUDA device: {err}. Falling back to CPU.");
-                        Device::Cpu
+                        panic!("CUDA acceleration requested but GPU initialization failed: {err}");
                     }
                 }
             }
             #[cfg(not(feature = "cuda"))]
             {
-                warn!(
-                    "CUDA requested but crate was compiled without 'cuda' feature. Falling back to CPU."
-                );
-                Device::Cpu
+                panic!("CUDA acceleration requested but oxide-embed was compiled without '--features cuda'");
             }
         }
         s if s.starts_with("cuda:") => {
