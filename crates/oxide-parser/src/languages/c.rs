@@ -120,8 +120,26 @@ fn traverse_node(
         }
         "type_definition" => {
             let decl = node.child_by_field_name("declarator");
-            let name_n = find_identifier_in_declarator(decl);
+            let name_n = if decl.is_some() {
+                find_identifier_in_declarator(decl)
+            } else {
+                let mut cursor = node.walk();
+                let mut found = None;
+                for child in node.children(&mut cursor) {
+                    if child.kind() == "type_identifier" || child.kind() == "identifier" {
+                        found = Some(child);
+                    }
+                }
+                found
+            };
             (Some(SymbolKind::TypeAlias), name_n)
+        }
+        "type_identifier" => {
+            if node.parent().map(|p| p.kind()) == Some("type_definition") {
+                (Some(SymbolKind::TypeAlias), Some(node))
+            } else {
+                (None, None)
+            }
         }
         _ => (None, None),
     };

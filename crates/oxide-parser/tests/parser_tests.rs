@@ -156,3 +156,69 @@ fn test_chunker_symbol_and_outline_chunks() {
     assert_eq!(chunks[1].kind, oxide_core::ChunkKind::SymbolChunk);
     assert_eq!(chunks[2].kind, oxide_core::ChunkKind::SymbolChunk);
 }
+
+#[test]
+fn test_c_and_cpp_extractors() {
+    let c_code = r#"
+#include <stdint.h>
+#include "stm32f4xx_hal.h"
+
+typedef struct {
+    uint32_t baud_rate;
+    uint8_t mode;
+} UART_ConfigTypeDef;
+
+void UART_Init(UART_ConfigTypeDef *config) {
+    HAL_UART_Init(config);
+}
+"#;
+    let fid_c = FileId::from_relative_path("drivers/uart.c");
+    let ext_c = get_extractor(Language::C).expect("c extractor");
+    let syms_c = ext_c.extract_symbols(&fid_c, c_code);
+    assert!(
+        syms_c
+            .iter()
+            .any(|s| s.name == "UART_ConfigTypeDef" && (s.kind == SymbolKind::Struct || s.kind == SymbolKind::TypeAlias))
+    );
+    assert!(
+        syms_c
+            .iter()
+            .any(|s| s.name == "UART_Init" && s.kind == SymbolKind::Function)
+    );
+
+    let import_edges = ext_c.extract_import_edges(&fid_c, c_code);
+    assert!(
+        import_edges
+            .iter()
+            .any(|e| e.imported_path == "stm32f4xx_hal.h" || e.imported_path == "<stdint.h>")
+    );
+
+    let cpp_code = r#"
+#include <iostream>
+
+namespace Oxide {
+    class EngineController {
+    public:
+        void startEngine() {
+            initIgnition();
+        }
+    private:
+        void initIgnition() {}
+    };
+}
+"#;
+    let fid_cpp = FileId::from_relative_path("src/engine.cpp");
+    let ext_cpp = get_extractor(Language::Cpp).expect("cpp extractor");
+    let syms_cpp = ext_cpp.extract_symbols(&fid_cpp, cpp_code);
+    assert!(
+        syms_cpp
+            .iter()
+            .any(|s| s.name == "EngineController" && s.kind == SymbolKind::Class)
+    );
+    assert!(
+        syms_cpp
+            .iter()
+            .any(|s| s.name == "startEngine" && s.kind == SymbolKind::Method)
+    );
+}
+

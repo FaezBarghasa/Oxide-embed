@@ -10,6 +10,7 @@ impl OutlineGenerator {
                 oxide_core::SymbolKind::Function => "fn",
                 oxide_core::SymbolKind::Method => "  fn",
                 oxide_core::SymbolKind::Struct => "struct",
+                oxide_core::SymbolKind::Union => "union",
                 oxide_core::SymbolKind::Enum => "enum",
                 oxide_core::SymbolKind::Trait => "trait",
                 oxide_core::SymbolKind::Class => "class",

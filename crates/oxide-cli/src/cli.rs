@@ -313,10 +313,14 @@ pub enum Commands {
 
     #[command(
         about = "Start Model Context Protocol (MCP) server over stdio for AI agent integration",
-        alias = "mcp-serve",
-        alias = "serve"
+        alias = "mcp-serve"
     )]
     Mcp,
+
+    #[command(
+        about = "Start Unix Domain Socket (UDS) daemon server at .oxide/oxide.sock for fast local IPC"
+    )]
+    Serve,
 
     #[command(
         about = "Start real-time debounced file watcher for incremental sub-millisecond AST re-indexing"

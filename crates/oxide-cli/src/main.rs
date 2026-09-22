@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod mcp;
+mod uds_server;
 mod watcher;
 
 use clap::Parser;
@@ -15,6 +16,7 @@ use commands::{
 use mcp::McpServer;
 use std::env;
 use std::process::ExitCode;
+use uds_server::UdsServer;
 use watcher::WorkspaceWatcher;
 
 #[tokio::main]
@@ -119,6 +121,10 @@ async fn main() -> ExitCode {
         Commands::Mcp => {
             let server = McpServer::new(project_root);
             server.run_stdio().await
+        }
+        Commands::Serve => {
+            let server = UdsServer::new(project_root);
+            server.run().await
         }
         Commands::Watch => {
             let watcher = WorkspaceWatcher::new(project_root);
