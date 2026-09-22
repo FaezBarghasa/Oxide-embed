@@ -124,7 +124,9 @@ fn traverse_node(
             (Some(SymbolKind::Enum), name_n)
         }
         "type_definition" | "alias_declaration" => {
-            let decl = node.child_by_field_name("declarator").or_else(|| node.child_by_field_name("name"));
+            let decl = node
+                .child_by_field_name("declarator")
+                .or_else(|| node.child_by_field_name("name"));
             let name_n = find_identifier_in_declarator(decl);
             (Some(SymbolKind::TypeAlias), name_n)
         }
@@ -214,14 +216,17 @@ fn traverse_node(
 fn find_identifier_in_declarator(node: Option<Node>) -> Option<Node> {
     let n = node?;
     match n.kind() {
-        "identifier" | "type_identifier" | "field_identifier" | "destructor_name" | "operator_name" => Some(n),
+        "identifier" | "type_identifier" | "field_identifier" | "destructor_name"
+        | "operator_name" => Some(n),
         "function_declarator"
         | "pointer_declarator"
         | "reference_declarator"
         | "array_declarator"
         | "parenthesized_declarator"
         | "qualified_identifier" => {
-            let inner = n.child_by_field_name("declarator").or_else(|| n.child_by_field_name("name"));
+            let inner = n
+                .child_by_field_name("declarator")
+                .or_else(|| n.child_by_field_name("name"));
             if inner.is_some() {
                 find_identifier_in_declarator(inner)
             } else {
@@ -342,12 +347,7 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
     }
 }
 
-fn traverse_includes(
-    node: Node,
-    content: &str,
-    file_id: &FileId,
-    imports: &mut Vec<ImportEdge>,
-) {
+fn traverse_includes(node: Node, content: &str, file_id: &FileId, imports: &mut Vec<ImportEdge>) {
     if node.kind() == "preproc_include"
         && let Some(path_node) = node.child_by_field_name("path")
         && let Ok(path_text) = path_node.utf8_text(content.as_bytes())

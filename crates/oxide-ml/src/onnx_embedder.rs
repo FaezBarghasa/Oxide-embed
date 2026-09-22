@@ -37,8 +37,9 @@ impl OnnxGemmaEmbedder {
                 Ok(b) => builder = b,
                 Err(err) => {
                     tracing::warn!("CUDA execution provider failed: {err}; using CPU fallback");
-                    builder = Session::builder()
-                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                    builder = Session::builder().map_err(|e| {
+                        OxideError::Ml(format!("Failed to create ONNX session builder: {e}"))
+                    })?;
                 }
             }
         }
@@ -48,8 +49,9 @@ impl OnnxGemmaEmbedder {
                 Ok(b) => builder = b,
                 Err(err) => {
                     tracing::warn!("ROCm execution provider failed: {err}; using CPU fallback");
-                    builder = Session::builder()
-                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                    builder = Session::builder().map_err(|e| {
+                        OxideError::Ml(format!("Failed to create ONNX session builder: {e}"))
+                    })?;
                 }
             }
         }
@@ -59,8 +61,9 @@ impl OnnxGemmaEmbedder {
                 Ok(b) => builder = b,
                 Err(err) => {
                     tracing::warn!("CoreML execution provider failed: {err}; using CPU fallback");
-                    builder = Session::builder()
-                        .map_err(|e| OxideError::Ml(format!("Failed to create ONNX session builder: {e}")))?;
+                    builder = Session::builder().map_err(|e| {
+                        OxideError::Ml(format!("Failed to create ONNX session builder: {e}"))
+                    })?;
                 }
             }
         }

@@ -280,7 +280,13 @@ oxide-embed memify
 oxide-embed consolidate
 ```
 
-### 8. Model Context Protocol (MCP) Server
+### 8. Interactive Terminal Dashboard (TUI)
+```bash
+# Launch interactive Code-ToC, symbol preview, and memory browser
+oxide-embed tui
+```
+
+### 9. Model Context Protocol (MCP) Server
 ```bash
 # Start stdio MCP server for agent IDEs
 oxide-embed mcp

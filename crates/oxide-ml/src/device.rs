@@ -38,7 +38,9 @@ pub fn select_device(preference: &str) -> Device {
             }
             #[cfg(not(feature = "cuda"))]
             {
-                warn!("CUDA requested but crate was compiled without 'cuda' feature. Falling back to CPU.");
+                warn!(
+                    "CUDA requested but crate was compiled without 'cuda' feature. Falling back to CPU."
+                );
                 Device::Cpu
             }
         }
@@ -52,14 +54,18 @@ pub fn select_device(preference: &str) -> Device {
                         dev
                     }
                     Err(err) => {
-                        warn!("Failed to initialize CUDA device {idx}: {err}. Falling back to CPU.");
+                        warn!(
+                            "Failed to initialize CUDA device {idx}: {err}. Falling back to CPU."
+                        );
                         Device::Cpu
                     }
                 }
             }
             #[cfg(not(feature = "cuda"))]
             {
-                warn!("CUDA requested but crate was compiled without 'cuda' feature. Falling back to CPU.");
+                warn!(
+                    "CUDA requested but crate was compiled without 'cuda' feature. Falling back to CPU."
+                );
                 Device::Cpu
             }
         }
@@ -79,12 +85,16 @@ pub fn select_device(preference: &str) -> Device {
             }
             #[cfg(not(feature = "metal"))]
             {
-                warn!("Metal requested but crate was compiled without 'metal' feature. Falling back to CPU.");
+                warn!(
+                    "Metal requested but crate was compiled without 'metal' feature. Falling back to CPU."
+                );
                 Device::Cpu
             }
         }
         "rocm" => {
-            warn!("ROCm compute requested for Candle: Candle utilizes hipBLAS via CUDA compatibility; selecting GPU 0.");
+            warn!(
+                "ROCm compute requested for Candle: Candle utilizes hipBLAS via CUDA compatibility; selecting GPU 0."
+            );
             #[cfg(feature = "cuda")]
             {
                 Device::new_cuda(0).unwrap_or(Device::Cpu)

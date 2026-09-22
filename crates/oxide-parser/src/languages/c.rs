@@ -224,7 +224,9 @@ fn find_identifier_in_declarator(node: Option<Node>) -> Option<Node> {
     let n = node?;
     match n.kind() {
         "identifier" => Some(n),
-        "function_declarator" | "pointer_declarator" | "array_declarator"
+        "function_declarator"
+        | "pointer_declarator"
+        | "array_declarator"
         | "parenthesized_declarator" => {
             let inner = n.child_by_field_name("declarator");
             if inner.is_some() {
@@ -323,12 +325,7 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
     }
 }
 
-fn traverse_includes(
-    node: Node,
-    content: &str,
-    file_id: &FileId,
-    imports: &mut Vec<ImportEdge>,
-) {
+fn traverse_includes(node: Node, content: &str, file_id: &FileId, imports: &mut Vec<ImportEdge>) {
     if node.kind() == "preproc_include"
         && let Some(path_node) = node.child_by_field_name("path")
         && let Ok(path_text) = path_node.utf8_text(content.as_bytes())

@@ -175,11 +175,8 @@ void UART_Init(UART_ConfigTypeDef *config) {
     let fid_c = FileId::from_relative_path("drivers/uart.c");
     let ext_c = get_extractor(Language::C).expect("c extractor");
     let syms_c = ext_c.extract_symbols(&fid_c, c_code);
-    assert!(
-        syms_c
-            .iter()
-            .any(|s| s.name == "UART_ConfigTypeDef" && (s.kind == SymbolKind::Struct || s.kind == SymbolKind::TypeAlias))
-    );
+    assert!(syms_c.iter().any(|s| s.name == "UART_ConfigTypeDef"
+        && (s.kind == SymbolKind::Struct || s.kind == SymbolKind::TypeAlias)));
     assert!(
         syms_c
             .iter()
@@ -340,4 +337,3 @@ fn test_embedded_metadata_extraction() {
             .any(|s| s.name == "Default_Handler" && s.kind == SymbolKind::Function)
     );
 }
-

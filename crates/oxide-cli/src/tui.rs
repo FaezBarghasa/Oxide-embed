@@ -6,15 +6,15 @@ use std::time::Duration;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap},
-    Frame, Terminal,
 };
 
 use oxide_core::memory::MemoryRecord;
@@ -47,31 +47,37 @@ impl TuiApp {
         let mut symbols = Vec::new();
         let mut memories = Vec::new();
 
-        if let Ok(db_path) = resolve_db_path(project_root) {
-            if let Ok(store) = SurrealProjectStore::open(&db_path).await {
-                if let Ok(hits) = store.stair_search("", 500).await {
-                    for h in hits {
-                        symbols.push(SymbolRecord {
-                            id: oxide_core::id::SymbolId::from_parts(&oxide_core::id::FileId::from_relative_path(&h.file_path), &h.leaf_symbol, h.start_line),
-                            file_id: oxide_core::id::FileId::from_relative_path(&h.file_path),
-                            kind: oxide_core::symbol::SymbolKind::Function,
-                            name: h.leaf_symbol,
-                            qualified_name: None,
-                            start_line: h.start_line,
-                            end_line: h.end_line,
-                            signature: h.signature,
-                            doc: None,
-                            fingerprint: String::new(),
-                            is_macro_node: h.macro_parent.is_some(),
-                            parent_id: None,
-                            breadcrumbs: h.breadcrumbs,
-                            summary: if h.code_body.is_empty() { None } else { Some(h.code_body) },
-                        });
-                    }
+        if let Ok(db_path) = resolve_db_path(project_root)
+            && let Ok(store) = SurrealProjectStore::open(&db_path).await
+        {
+            if let Ok(hits) = store.stair_search("", 500).await {
+                for h in hits {
+                    let fid = oxide_core::id::FileId::from_relative_path(&h.file_path);
+                    let sym_id = oxide_core::id::SymbolId::new(&fid, &h.leaf_symbol);
+                    symbols.push(SymbolRecord {
+                        id: sym_id,
+                        file_id: fid,
+                        kind: oxide_core::symbol::SymbolKind::Function,
+                        name: h.leaf_symbol,
+                        qualified_name: None,
+                        start_line: h.start_line,
+                        end_line: h.end_line,
+                        signature: h.signature,
+                        doc: None,
+                        fingerprint: String::new(),
+                        is_macro_node: h.macro_parent.is_some(),
+                        parent_id: None,
+                        breadcrumbs: h.breadcrumbs,
+                        summary: if h.code_body.is_empty() {
+                            None
+                        } else {
+                            Some(h.code_body)
+                        },
+                    });
                 }
-                if let Ok(all_mems) = store.list_all_memories().await {
-                    memories = all_mems;
-                }
+            }
+            if let Ok(all_mems) = store.list_all_memories().await {
+                memories = all_mems;
             }
         }
 
@@ -94,7 +100,8 @@ impl TuiApp {
             symbol_list_state,
             search_query: String::new(),
             search_mode: false,
-            status_msg: "Press [Tab] to switch pane | [/] Search | [j/k] Navigate | [q] Quit".to_string(),
+            status_msg: "Press [Tab] to switch pane | [/] Search | [j/k] Navigate | [q] Quit"
+                .to_string(),
             should_quit: false,
         })
     }
@@ -108,9 +115,7 @@ impl TuiApp {
                 .iter()
                 .filter(|s| {
                     s.name.to_lowercase().contains(&q)
-                        || s.breadcrumbs
-                            .iter()
-                            .any(|b| b.to_lowercase().contains(&q))
+                        || s.breadcrumbs.iter().any(|b| b.to_lowercase().contains(&q))
                 })
                 .collect()
         }
@@ -192,45 +197,45 @@ async fn run_loop<B: ratatui::backend::Backend>(
     while !app.should_quit {
         terminal.draw(|f| ui(f, app))?;
 
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if app.search_mode {
-                    match key.code {
-                        KeyCode::Esc | KeyCode::Enter => {
-                            app.search_mode = false;
-                        }
-                        KeyCode::Backspace => {
-                            app.search_query.pop();
-                        }
-                        KeyCode::Char(c) => {
-                            app.search_query.push(c);
-                        }
-                        _ => {}
+        if event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+        {
+            if app.search_mode {
+                match key.code {
+                    KeyCode::Esc | KeyCode::Enter => {
+                        app.search_mode = false;
                     }
-                } else {
-                    match key.code {
-                        KeyCode::Char('q') | KeyCode::Char('c')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
-                            app.should_quit = true;
-                        }
-                        KeyCode::Char('q') => {
-                            app.should_quit = true;
-                        }
-                        KeyCode::Tab => {
-                            app.toggle_pane();
-                        }
-                        KeyCode::Char('/') => {
-                            app.search_mode = true;
-                        }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            app.next_symbol();
-                        }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            app.prev_symbol();
-                        }
-                        _ => {}
+                    KeyCode::Backspace => {
+                        app.search_query.pop();
                     }
+                    KeyCode::Char(c) => {
+                        app.search_query.push(c);
+                    }
+                    _ => {}
+                }
+            } else {
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Char('c')
+                        if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                    {
+                        app.should_quit = true;
+                    }
+                    KeyCode::Char('q') => {
+                        app.should_quit = true;
+                    }
+                    KeyCode::Tab => {
+                        app.toggle_pane();
+                    }
+                    KeyCode::Char('/') => {
+                        app.search_mode = true;
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        app.next_symbol();
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        app.prev_symbol();
+                    }
+                    _ => {}
                 }
             }
         }
@@ -374,7 +379,9 @@ fn ui(f: &mut Frame, app: &mut TuiApp) {
     let mut side_content = vec![
         Line::from(Span::styled(
             "GraphRAG & Memory Layers",
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
         )),
         Line::from(format!("• Total Memories: {}", app.memories.len())),
         Line::from("• Ebbinghaus Decay: Active"),
@@ -390,7 +397,10 @@ fn ui(f: &mut Frame, app: &mut TuiApp) {
     } else {
         for m in app.memories.iter().take(6) {
             side_content.push(Line::from(vec![
-                Span::styled(format!("[{}] ", m.kind.as_str()), Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    format!("[{}] ", m.kind.as_str()),
+                    Style::default().fg(Color::Cyan),
+                ),
                 Span::styled(&m.title, Style::default().fg(Color::White)),
             ]));
         }
@@ -423,7 +433,7 @@ fn ui(f: &mut Frame, app: &mut TuiApp) {
     f.render_widget(search_bar, chunks[2]);
 
     // 4. Footer
-    let footer = Paragraph::new(app.status_msg.as_str())
-        .style(Style::default().fg(Color::DarkGray));
+    let footer =
+        Paragraph::new(app.status_msg.as_str()).style(Style::default().fg(Color::DarkGray));
     f.render_widget(footer, chunks[3]);
 }

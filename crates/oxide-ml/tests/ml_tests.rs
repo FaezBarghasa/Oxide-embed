@@ -131,4 +131,3 @@ async fn test_batched_embedding_parity() {
     assert!(sim2 > 0.999, "batch item 1 similarity was {sim2}");
     assert!(sim3 > 0.999, "batch item 2 similarity was {sim3}");
 }
-

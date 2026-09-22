@@ -56,7 +56,8 @@ impl WorkspaceWatcher {
 
         let mut last_processed = Instant::now();
         let mut pending_files: HashSet<PathBuf> = HashSet::new();
-        let mut file_hash_cache: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
+        let mut file_hash_cache: std::collections::HashMap<PathBuf, String> =
+            std::collections::HashMap::new();
 
         loop {
             // Drain incoming events with short timeout
@@ -77,7 +78,14 @@ impl WorkspaceWatcher {
                 for file_path in batch {
                     let start = Instant::now();
                     match self
-                        .reindex_file(&file_path, &project_id, &store, &embedder, &chunker, &mut file_hash_cache)
+                        .reindex_file(
+                            &file_path,
+                            &project_id,
+                            &store,
+                            &embedder,
+                            &chunker,
+                            &mut file_hash_cache,
+                        )
                         .await
                     {
                         Ok(Some(sym_count)) => {
