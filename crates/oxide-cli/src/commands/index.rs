@@ -111,7 +111,7 @@ pub async fn handle_index(
             let texts: Vec<String> = chunk_batch.iter().map(|c| c.text.clone()).collect();
             let embeddings = embedder.embed_batch(&texts).await?;
 
-            for (chunk, emb) in chunk_batch.iter_mut().zip(embeddings.into_iter()) {
+            for (chunk, emb) in chunk_batch.iter_mut().zip(embeddings) {
                 chunk.embedding = Some(emb);
                 chunk.embedding_model = Some(manifest.embedding.model.clone());
                 chunk.embedding_dim = Some(embedder.dimension());
@@ -151,7 +151,7 @@ pub async fn handle_index(
         for section_batch in all_sections.chunks_mut(batch_size) {
             let texts: Vec<String> = section_batch.iter().map(|s| s.content.clone()).collect();
             if let Ok(embeddings) = embedder.embed_batch(&texts).await {
-                for (section, emb) in section_batch.iter_mut().zip(embeddings.into_iter()) {
+                for (section, emb) in section_batch.iter_mut().zip(embeddings) {
                     section.embedding = Some(emb);
                     store.upsert_doc_section(section).await?;
                     total_doc_sections += 1;

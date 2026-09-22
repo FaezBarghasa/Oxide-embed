@@ -111,7 +111,7 @@ impl Embedder for CandleQwenEmbedder {
         let mut actual_token_lengths = Vec::with_capacity(batch_size);
         let mut max_seq_len = 1;
         for encoding in &encodings {
-            let len = encoding.get_ids().len().min(2048).max(1);
+            let len = encoding.get_ids().len().clamp(1, 2048);
             actual_token_lengths.push(len);
             if len > max_seq_len {
                 max_seq_len = len;
@@ -121,11 +121,11 @@ impl Embedder for CandleQwenEmbedder {
         let mut all_ids = Vec::with_capacity(batch_size * max_seq_len);
         for (encoding, &actual_len) in encodings.iter().zip(actual_token_lengths.iter()) {
             let ids = encoding.get_ids();
-            for i in 0..actual_len {
-                all_ids.push(ids[i]);
+            for &id in ids.iter().take(actual_len) {
+                all_ids.push(id);
             }
-            for _ in actual_len..max_seq_len {
-                all_ids.push(0);
+            if max_seq_len > actual_len {
+                all_ids.extend(std::iter::repeat_n(0, max_seq_len - actual_len));
             }
         }
 
@@ -161,13 +161,13 @@ impl Embedder for CandleQwenEmbedder {
             let mut pooled = vec![0.0f32; dim];
             for t in 0..token_count {
                 let offset = (b * seq_len + t) * hidden_size;
-                for h in 0..dim {
-                    pooled[h] += flat[offset + h];
+                for (h, item) in pooled.iter_mut().enumerate().take(dim) {
+                    *item += flat[offset + h];
                 }
             }
             let denom = token_count as f32;
-            for h in 0..dim {
-                pooled[h] /= denom;
+            for item in pooled.iter_mut().take(dim) {
+                *item /= denom;
             }
 
             // L2 normalize

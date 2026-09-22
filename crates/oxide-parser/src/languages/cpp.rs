@@ -296,10 +296,10 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
         {
             let line = node.start_position().row + 1;
             let callee_name = callee_text
-                .split("::")
-                .last()
-                .and_then(|s| s.split("->").last())
-                .and_then(|s| s.split('.').last())
+                .rsplit("::")
+                .next()
+                .and_then(|s| s.rsplit("->").next())
+                .and_then(|s| s.rsplit('.').next())
                 .unwrap_or(callee_text)
                 .trim()
                 .to_string();
@@ -348,22 +348,21 @@ fn traverse_includes(
     file_id: &FileId,
     imports: &mut Vec<ImportEdge>,
 ) {
-    if node.kind() == "preproc_include" {
-        if let Some(path_node) = node.child_by_field_name("path")
-            && let Ok(path_text) = path_node.utf8_text(content.as_bytes())
-        {
-            let cleaned = path_text
-                .trim_matches('<')
-                .trim_matches('>')
-                .trim_matches('"')
-                .trim();
+    if node.kind() == "preproc_include"
+        && let Some(path_node) = node.child_by_field_name("path")
+        && let Ok(path_text) = path_node.utf8_text(content.as_bytes())
+    {
+        let cleaned = path_text
+            .trim_matches('<')
+            .trim_matches('>')
+            .trim_matches('"')
+            .trim();
 
-            imports.push(ImportEdge {
-                file_id: file_id.clone(),
-                imported_path: cleaned.to_string(),
-                imported_symbols: Vec::new(),
-            });
-        }
+        imports.push(ImportEdge {
+            file_id: file_id.clone(),
+            imported_path: cleaned.to_string(),
+            imported_symbols: Vec::new(),
+        });
     }
 
     let mut cursor = node.walk();

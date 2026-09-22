@@ -138,7 +138,7 @@ impl Embedder for CandleBertEmbedder {
         let mut actual_token_lengths = Vec::with_capacity(batch_size);
         let mut max_seq_len = 1;
         for encoding in &encodings {
-            let len = encoding.get_ids().len().min(512).max(1);
+            let len = encoding.get_ids().len().clamp(1, 512);
             actual_token_lengths.push(len);
             if len > max_seq_len {
                 max_seq_len = len;
@@ -149,8 +149,8 @@ impl Embedder for CandleBertEmbedder {
         let mut all_masks = Vec::with_capacity(batch_size * max_seq_len);
         for (encoding, &actual_len) in encodings.iter().zip(actual_token_lengths.iter()) {
             let ids = encoding.get_ids();
-            for i in 0..actual_len {
-                all_ids.push(ids[i]);
+            for &id in ids.iter().take(actual_len) {
+                all_ids.push(id);
                 all_masks.push(1u32);
             }
             for _ in actual_len..max_seq_len {
@@ -188,13 +188,13 @@ impl Embedder for CandleBertEmbedder {
             let mut pooled = vec![0.0f32; hidden_size];
             for t in 0..token_count {
                 let offset = (b * seq_len + t) * hidden_size;
-                for h in 0..hidden_size {
-                    pooled[h] += flat_embeddings[offset + h];
+                for (h, item) in pooled.iter_mut().enumerate().take(hidden_size) {
+                    *item += flat_embeddings[offset + h];
                 }
             }
             let denom = token_count as f32;
-            for h in 0..hidden_size {
-                pooled[h] /= denom;
+            for item in pooled.iter_mut().take(hidden_size) {
+                *item /= denom;
             }
 
             // L2 normalize

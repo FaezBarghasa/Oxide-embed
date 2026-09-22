@@ -1,7 +1,7 @@
 use oxide_core::error::{OxideError, Result};
 use oxide_core::id::ProjectId;
 use oxide_db::traversal::GraphTraversalService;
-use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
+use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::Embedder;
 use oxide_ml::candle_embedder::CandleBertEmbedder;
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ impl UdsServer {
 
         let db_path = oxide_core::resolve_db_path(&self.workspace_dir)?;
         let store = SurrealProjectStore::open(&db_path).await?;
-        let embedder = CandleBertEmbedder::new_offline();
+        let _embedder = CandleBertEmbedder::new_offline();
 
         let manifest = oxide_core::OxideManifest::load_from_dir(&oxide_dir)?;
         let project_id = manifest.project_id;
@@ -127,7 +127,7 @@ impl UdsServer {
 
     async fn dispatch_method(
         req: &UdsRequest,
-        workspace_dir: &Path,
+        _workspace_dir: &Path,
         project_id: &ProjectId,
         store: &SurrealProjectStore,
         embedder: &CandleBertEmbedder,
