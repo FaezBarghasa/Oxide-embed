@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-09-22
+
+### Added
+
+#### 1. Full Cross-Platform Application Builders
+- **Ubuntu / Debian / Pop!_OS (`build-ubuntu-app.sh`)**:
+  - Full automated application build script compiling release binary with LTO, stripping symbols, assembling Debian package (`.deb`), generating portable `.tar.gz`, `.desktop` launcher, and `SHA256SUMS`.
+- **macOS Universal Application (`build-macos-app.sh`)**:
+  - Universal 2 Mach-O binary packaging via `lipo` (Apple Silicon `aarch64-apple-darwin` + Intel `x86_64-apple-darwin`).
+  - Generates `launchd` LaunchAgent service plist (`com.faezbarghasa.oxide-embed.plist`), Homebrew formula (`oxide-embed.rb`), release tarball, and SHA256 checksums.
+- **Windows Applications (`build-windows-app.sh` & `build-windows-app.ps1`)**:
+  - Cross-compilation support via `cargo-xwin` (MSVC) or MinGW (`x86_64-pc-windows-gnu`).
+  - Native PowerShell builder (`build-windows-app.ps1`), release `.zip` package, runner batch scripts, and SHA256 checksums.
+
+#### 2. Cross-Platform One-Liner Installers
+- **Universal Linux Installer (`install.sh`)**:
+  - Distro package manager detection (`dpkg` fast-path for `.deb`), user-level (`~/.local/bin`) or root (`/usr/local/bin`) installation, automated shell completions (Bash, Zsh, Fish), and Systemd user daemon setup (`oxide-watch.service`).
+- **Universal Windows PowerShell Installer (`install.ps1`)**:
+  - Auto-locates binary or compiles on-demand, manages Windows User `PATH`, configures PowerShell completions, and adds desktop / batch launchers.
+
+---
+
 ## [0.3.1] - 2026-09-19
 
 ### Added

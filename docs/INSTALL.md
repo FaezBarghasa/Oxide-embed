@@ -1,116 +1,145 @@
-# Oxide-embed Linux Installation Guide
+# Oxide-Embed Cross-Platform Installation & Build Guide
 
-Oxide-embed provides first-class native packages and standalone binaries for all major Linux distributions, optimized for fast installation and automated systemd user daemon management.
-
----
-
-## 1. Quick Universal Installation (Recommended)
-
-Run the automated installer script to detect your CPU architecture, install the binary to your path, and optionally configure the systemd file watcher daemon:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/FaezBarghasa/Oxide-embed/main/scripts/install.sh | bash
-```
-
-To install directly from a cloned repository:
-
-```bash
-git clone https://github.com/FaezBarghasa/Oxide-embed.git
-cd Oxide-embed
-./scripts/install.sh --enable-service
-```
+Oxide-Embed provides native release builders, one-liner installers, and distribution packages for Linux, macOS, and Windows.
 
 ---
 
-## 2. Debian / Ubuntu / Pop!_OS (`.deb` Package)
+## 1. Quick One-Liner Installers
 
-Native Debian packages are provided for `amd64` and `arm64` architectures.
-
-### Option A: Install Prebuilt `.deb`
+### Linux (Debian, Ubuntu, Pop!_OS, Arch, Fedora, Alpine)
 ```bash
-# Download and install with dpkg or apt
-sudo dpkg -i dist/oxide-embed_0.2.0_amd64.deb
+# From local repository:
+./install.sh
 
-# Or install with auto-resolved dependencies
-sudo apt install ./dist/oxide-embed_0.2.0_amd64.deb
+# Or from remote repository:
+curl -fsSL https://raw.githubusercontent.com/FaezBarghasa/Oxide-embed/main/install.sh | bash
 ```
 
-### Option B: Build `.deb` from Source
-Ensure `cargo`, `rustc >= 1.85`, and `dpkg-deb` are installed:
-```bash
-./scripts/package-deb.sh
-sudo dpkg -i dist/oxide-embed_0.2.0_amd64.deb
+### Windows (PowerShell 5.1+ & PowerShell Core)
+```powershell
+# From local repository:
+.\install.ps1
+
+# Or with custom target directory & desktop icon:
+.\install.ps1 -InstallDir "$env:LOCALAPPDATA\Programs\Oxide-Embed\bin" -CreateDesktopShortcut
 ```
 
 ---
 
-## 3. Arch Linux / Manjaro (`PKGBUILD`)
+## 2. Full Application Builder Pipelines
 
-Install via standard Arch Linux `makepkg` workflow:
+Dedicated, self-contained shell and PowerShell scripts automate compiling, stripping, creating desktop entries, packaging, and generating SHA256 checksums into `dist/`.
 
+### A. Ubuntu / Debian / Pop!_OS (`build-ubuntu-app.sh`)
+```bash
+./build-ubuntu-app.sh
+```
+**Artifacts Generated in `dist/`:**
+- **Debian Package**: `dist/oxide-embed_0.4.0_amd64.deb`
+- **Portable Tarball**: `dist/oxide-embed-v0.4.0-x86_64-unknown-linux-gnu.tar.gz`
+- **Standalone Stripped Binary**: `dist/bin/oxide-embed`
+- **Desktop Entry**: `dist/oxide-embed.desktop`
+- **Checksums**: `dist/SHA256SUMS`
+
+**Install Debian Package:**
+```bash
+sudo dpkg -i dist/oxide-embed_0.4.0_amd64.deb
+```
+
+---
+
+### B. macOS Universal Application (`build-macos-app.sh`)
+```bash
+./build-macos-app.sh
+```
+**Artifacts Generated in `dist/macos/`:**
+- **Universal Binary (`lipo`)**: `dist/macos/bin/oxide-embed` (Apple Silicon + Intel)
+- **Universal Release Tarball**: `dist/macos/oxide-embed-v0.4.0-universal-apple-darwin.tar.gz`
+- **LaunchAgent Service Plist**: `dist/macos/launchd/com.faezbarghasa.oxide-embed.plist`
+- **Homebrew Formula**: `dist/macos/homebrew/oxide-embed.rb`
+- **Checksums**: `dist/macos/SHA256SUMS`
+
+**Load macOS Background Service:**
+```bash
+cp dist/macos/launchd/com.faezbarghasa.oxide-embed.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.faezbarghasa.oxide-embed.plist
+```
+
+---
+
+### C. Windows Applications (`build-windows-app.sh` & `build-windows-app.ps1`)
+
+#### Cross-Compilation from Linux:
+```bash
+# Requires MinGW or cargo-xwin:
+./build-windows-app.sh
+```
+
+#### Native Build on Windows (PowerShell):
+```powershell
+.\build-windows-app.ps1
+```
+
+**Artifacts Generated in `dist/windows/`:**
+- **Executable**: `dist/windows/bin/oxide-embed.exe`
+- **Release Zip Archive**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc.zip`
+- **PowerShell Installer**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc/install.ps1`
+- **MCP Launcher**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc/run-mcp.bat`
+- **Checksums**: `dist/windows/SHA256SUMS`
+
+---
+
+## 3. Native Linux Distro Packages
+
+### Arch Linux / Manjaro (`PKGBUILD`)
 ```bash
 cd packaging/arch
 makepkg -si
 ```
 
-This compiles the binary with native CPU optimizations and places `oxide-embed` into `/usr/bin/` with default systemd user unit files.
-
----
-
-## 4. Fedora / RHEL / Rocky Linux (RPM)
-
-Build and install an RPM package using `rpmbuild`:
-
+### Fedora / RHEL / Rocky Linux (RPM)
 ```bash
-# Prepare rpmbuild directory tree
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 cp packaging/fedora/oxide-embed.spec ~/rpmbuild/SPECS/
-
-# Build RPM
 rpmbuild -ba ~/rpmbuild/SPECS/oxide-embed.spec
-
-# Install the generated RPM
-sudo dnf install ~/rpmbuild/RPMS/x86_64/oxide-embed-0.2.0-1.fc*.x86_64.rpm
+sudo dnf install ~/rpmbuild/RPMS/x86_64/oxide-embed-*.rpm
 ```
 
----
-
-## 5. Alpine Linux (`APKBUILD`)
-
-To build on Alpine Linux with musl libc:
-
+### Alpine Linux (`APKBUILD`)
 ```bash
 cd packaging/alpine
 abuild -r
-apk add ~/packages/*/x86_64/oxide-embed-0.2.0-r0.apk
+apk add ~/packages/*/x86_64/oxide-embed-*.apk
 ```
 
 ---
 
-## 6. Systemd Background Watcher Daemon
+## 4. Background Watcher Daemon
 
-Oxide-embed can monitor your codebases continuously in the background, updating AST symbol graphs and vector indexes incrementally whenever files change:
+Oxide-Embed monitors codebases continuously in the background, updating AST symbol graphs and vector indexes incrementally on file save:
 
+### Linux (Systemd)
 ```bash
-# Enable and start the user service
+# Enable & start user service
 systemctl --user enable --now oxide-watch.service
 
-# Check live daemon status
+# Inspect live status and logs
 systemctl --user status oxide-watch.service
-
-# Stream logs
 journalctl --user -u oxide-watch.service -f
 ```
 
+### macOS (LaunchAgent)
+```bash
+launchctl load ~/Library/LaunchAgents/com.faezbarghasa.oxide-embed.plist
+tail -f /tmp/oxide-embed.stdout.log
+```
+
 ---
 
-## 7. Verification
-
-Verify that the CLI and all subcommands are operational:
+## 5. Verification
 
 ```bash
 oxide-embed --version
 oxide-embed --help
-oxide-embed check-drift
 oxide-embed mcp-status
 ```

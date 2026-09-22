@@ -84,31 +84,60 @@ Oxide-Embed automatically probes your system hardware at runtime and dynamically
 
 ---
 
-## 📦 Multi-Distro Linux Installation
+## 📦 Cross-Platform Installation & Application Builders
 
-### Quick Universal Script
+### 1. One-Liner Fast Installers
+
+#### Linux (Universal Bash Installer)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/FaezBarghasa/Oxide-embed/main/scripts/install.sh | bash
+# Direct repository or web installer
+./install.sh
+# or from GitHub:
+# curl -fsSL https://raw.githubusercontent.com/FaezBarghasa/Oxide-embed/main/install.sh | bash
 ```
 
-### Debian / Ubuntu / Pop!_OS (`.deb` Package)
-```bash
-# Build or download prebuilt deb package
-./scripts/package-deb.sh
-sudo dpkg -i dist/oxide-embed_0.3.0_amd64.deb
+#### Windows (PowerShell Installer)
+```powershell
+# In PowerShell:
+.\install.ps1
+# or from GitHub:
+# irm https://raw.githubusercontent.com/FaezBarghasa/Oxide-embed/main/install.ps1 | iex
 ```
 
-### Arch Linux (`PKGBUILD`)
+---
+
+### 2. Full Application Builder Scripts
+
+Oxide-Embed includes dedicated release builder pipelines in the root directory:
+
+| OS / Target | Script | Output Packages / Artifacts in `dist/` |
+| :--- | :--- | :--- |
+| **Ubuntu / Debian / Pop!_OS** | [`./build-ubuntu-app.sh`](build-ubuntu-app.sh) | `.deb` package (`dist/oxide-embed_0.4.0_amd64.deb`), portable `.tar.gz`, `.desktop` launcher, `dist/bin/oxide-embed`, `SHA256SUMS` |
+| **macOS (Apple Silicon + Intel)** | [`./build-macos-app.sh`](build-macos-app.sh) | Universal Mach-O Binary (`lipo`), `.tar.gz` bundle, LaunchAgent plist (`launchd`), Homebrew formula (`oxide-embed.rb`), `SHA256SUMS` |
+| **Windows (Cross / Native)** | [`./build-windows-app.sh`](build-windows-app.sh)<br>[`.\build-windows-app.ps1`](build-windows-app.ps1) | `oxide-embed.exe`, release `.zip` archive, PowerShell installer (`install.ps1`), runner batch file (`run-mcp.bat`), `SHA256SUMS` |
+
+---
+
+### 3. Native Linux Distro Packages
+
+#### Debian / Ubuntu / Pop!_OS (`.deb` Package)
+```bash
+# Build full application and deb package
+./build-ubuntu-app.sh
+sudo dpkg -i dist/oxide-embed_0.4.0_amd64.deb
+```
+
+#### Arch Linux (`PKGBUILD`)
 ```bash
 cd packaging/arch && makepkg -si
 ```
 
-### Fedora / RHEL (RPM)
+#### Fedora / RHEL (RPM)
 ```bash
 rpmbuild -ba packaging/fedora/oxide-embed.spec
 ```
 
-*For comprehensive distro installation instructions, see [docs/INSTALL.md](docs/INSTALL.md).*
+*For comprehensive distro and platform installation guides, see [docs/INSTALL.md](docs/INSTALL.md).*
 
 ---
 
