@@ -18,6 +18,7 @@ impl OutlineGenerator {
                 oxide_core::SymbolKind::TypeAlias => "type",
                 oxide_core::SymbolKind::Constant => "const",
                 oxide_core::SymbolKind::Static => "static",
+                oxide_core::SymbolKind::Field => "field",
                 oxide_core::SymbolKind::Module => "mod",
                 oxide_core::SymbolKind::Import => "use",
                 oxide_core::SymbolKind::Macro => "macro",

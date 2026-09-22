@@ -3635,7 +3635,7 @@ dependencies = [
 
 [[package]]
 name = "oxide-cli"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3658,7 +3658,7 @@ dependencies = [
 
 [[package]]
 name = "oxide-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3674,7 +3674,7 @@ dependencies = [
 
 [[package]]
 name = "oxide-db"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3693,7 +3693,7 @@ dependencies = [
 
 [[package]]
 name = "oxide-ml"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3716,7 +3716,7 @@ dependencies = [
 
 [[package]]
 name = "oxide-parser"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "chrono",

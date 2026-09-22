@@ -1,6 +1,7 @@
 pub mod bash;
 pub mod c;
 pub mod cpp;
+pub mod embedded_meta;
 pub mod generic;
 pub mod go;
 pub mod java;
@@ -41,6 +42,9 @@ pub fn get_extractor(lang: Language) -> Option<Box<dyn LanguageExtractor + Send 
         Language::Go => Some(Box::new(go::GoExtractor)),
         Language::Java | Language::Kotlin => Some(Box::new(java::JavaExtractor)),
         Language::Bash => Some(Box::new(bash::BashExtractor)),
+        Language::Svd | Language::LinkerScript | Language::Assembly => {
+            Some(Box::new(embedded_meta::EmbeddedMetaExtractor::new(lang)))
+        }
         Language::Slint
         | Language::Markdown
         | Language::Xml

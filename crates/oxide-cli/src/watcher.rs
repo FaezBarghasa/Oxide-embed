@@ -56,6 +56,7 @@ impl WorkspaceWatcher {
 
         let mut last_processed = Instant::now();
         let mut pending_files: HashSet<PathBuf> = HashSet::new();
+        let mut file_hash_cache: std::collections::HashMap<PathBuf, String> = std::collections::HashMap::new();
 
         loop {
             // Drain incoming events with short timeout
@@ -76,10 +77,10 @@ impl WorkspaceWatcher {
                 for file_path in batch {
                     let start = Instant::now();
                     match self
-                        .reindex_file(&file_path, &project_id, &store, &embedder, &chunker)
+                        .reindex_file(&file_path, &project_id, &store, &embedder, &chunker, &mut file_hash_cache)
                         .await
                     {
-                        Ok(sym_count) => {
+                        Ok(Some(sym_count)) => {
                             let rel = file_path
                                 .strip_prefix(&self.workspace_dir)
                                 .unwrap_or(&file_path);
@@ -89,6 +90,9 @@ impl WorkspaceWatcher {
                                 sym_count,
                                 start.elapsed().as_secs_f64() * 1000.0
                             );
+                        }
+                        Ok(None) => {
+                            // File content hash unchanged (deduplicated)
                         }
                         Err(e) => {
                             eprintln!(
@@ -131,7 +135,8 @@ impl WorkspaceWatcher {
         store: &SurrealProjectStore,
         embedder: &CandleBertEmbedder,
         chunker: &Chunker,
-    ) -> Result<usize> {
+        file_hash_cache: &mut std::collections::HashMap<PathBuf, String>,
+    ) -> Result<Option<usize>> {
         let str_rep = path.to_string_lossy();
         if str_rep.contains("/.oxide/memories/")
             && path.extension().and_then(|s| s.to_str()) == Some("md")
@@ -142,10 +147,19 @@ impl WorkspaceWatcher {
             )?;
             let count = records.len();
             store.sync_all_memories(&records).await?;
-            return Ok(count);
+            return Ok(Some(count));
         }
 
         let content = std::fs::read_to_string(path)?;
+        let content_hash = oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(content.as_bytes()));
+
+        if let Some(cached_hash) = file_hash_cache.get(path)
+            && cached_hash == &content_hash
+        {
+            return Ok(None);
+        }
+        file_hash_cache.insert(path.to_path_buf(), content_hash.clone());
+
         let rel_path = path.strip_prefix(&self.workspace_dir).unwrap_or(path);
         let rel_str = rel_path.to_string_lossy().to_string();
         let fid = FileId::from_relative_path(&rel_str);
@@ -162,9 +176,7 @@ impl WorkspaceWatcher {
             project_id: project_id.clone(),
             relative_path: rel_str.clone(),
             language: lang_str,
-            content_hash: Some(oxide_core::id::bytes_to_hex(&sha2::Sha256::digest(
-                content.as_bytes(),
-            ))),
+            content_hash: Some(content_hash),
             size_bytes: content.len() as u64,
             last_indexed_at: Some(chrono::Utc::now()),
         };
@@ -211,6 +223,6 @@ impl WorkspaceWatcher {
             }
         }
 
-        Ok(sym_count)
+        Ok(Some(sym_count))
     }
 }

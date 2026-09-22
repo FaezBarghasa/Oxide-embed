@@ -222,3 +222,122 @@ namespace Oxide {
     );
 }
 
+#[test]
+fn test_embedded_metadata_extraction() {
+    let svd_code = r#"
+    <device>
+      <name>STM32F401</name>
+      <peripherals>
+        <peripheral>
+          <name>GPIOA</name>
+          <description>General-purpose I/Os</description>
+          <baseAddress>0x40020000</baseAddress>
+          <registers>
+            <register>
+              <name>MODER</name>
+              <description>GPIO port mode register</description>
+              <addressOffset>0x00</addressOffset>
+            </register>
+            <register>
+              <name>ODR</name>
+              <description>GPIO port output data register</description>
+              <addressOffset>0x14</addressOffset>
+            </register>
+          </registers>
+        </peripheral>
+      </peripherals>
+    </device>
+"#;
+    let fid_svd = FileId::from_relative_path("stm32f401.svd");
+    let ext_svd = get_extractor(Language::Svd).expect("svd extractor");
+    let syms_svd = ext_svd.extract_symbols(&fid_svd, svd_code);
+    assert!(
+        syms_svd
+            .iter()
+            .any(|s| s.name == "GPIOA" && s.kind == SymbolKind::Module)
+    );
+    assert!(
+        syms_svd
+            .iter()
+            .any(|s| s.name == "GPIOA::MODER" && s.kind == SymbolKind::Field)
+    );
+    assert!(
+        syms_svd
+            .iter()
+            .any(|s| s.name == "GPIOA::ODR" && s.kind == SymbolKind::Field)
+    );
+
+    let ld_code = r#"
+    MEMORY
+    {
+      FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
+      RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 96K
+    }
+    SECTIONS
+    {
+      .text :
+      {
+        *(.isr_vector)
+        *(.text)
+      } > FLASH
+      .bss :
+      {
+        *(.bss)
+      } > RAM
+    }
+"#;
+    let fid_ld = FileId::from_relative_path("memory.ld");
+    let ext_ld = get_extractor(Language::LinkerScript).expect("ld extractor");
+    let syms_ld = ext_ld.extract_symbols(&fid_ld, ld_code);
+    assert!(
+        syms_ld
+            .iter()
+            .any(|s| s.name == "FLASH" && s.kind == SymbolKind::Constant)
+    );
+    assert!(
+        syms_ld
+            .iter()
+            .any(|s| s.name == "RAM" && s.kind == SymbolKind::Constant)
+    );
+    assert!(
+        syms_ld
+            .iter()
+            .any(|s| s.name == ".text" && s.kind == SymbolKind::Module)
+    );
+    assert!(
+        syms_ld
+            .iter()
+            .any(|s| s.name == ".bss" && s.kind == SymbolKind::Module)
+    );
+
+    let asm_code = r#"
+    .syntax unified
+    .cpu cortex-m4
+    .thumb
+
+    .global Reset_Handler
+    Reset_Handler:
+        ldr   r0, =_estack
+        mov   sp, r0
+        bl    SystemInit
+        b     main
+
+    .section .text.Default_Handler,"ax",%progbits
+    Default_Handler:
+        b     Default_Handler
+"#;
+    let fid_asm = FileId::from_relative_path("startup_stm32f401xc.s");
+    let ext_asm = get_extractor(Language::Assembly).expect("asm extractor");
+    let syms_asm = ext_asm.extract_symbols(&fid_asm, asm_code);
+    assert!(
+        syms_asm
+            .iter()
+            .any(|s| s.name == "Reset_Handler" && s.kind == SymbolKind::Function)
+    );
+    assert!(
+        syms_asm
+            .iter()
+            .any(|s| s.name == "Default_Handler" && s.kind == SymbolKind::Function)
+    );
+}
+

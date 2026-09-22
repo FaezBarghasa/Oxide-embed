@@ -45,6 +45,7 @@ DEFINE FIELD embedding_model ON chunk TYPE option<string>;
 DEFINE FIELD embedding_dim ON chunk TYPE option<int>;
 DEFINE FIELD vector_set_id ON chunk TYPE option<string>;
 DEFINE FIELD updated_at ON chunk TYPE datetime;
+DEFINE INDEX chunk_vector_idx ON chunk FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
 
 DEFINE TABLE oxide_migration SCHEMAFULL;
 DEFINE FIELD from_version ON oxide_migration TYPE int;
@@ -169,6 +170,7 @@ DEFINE FIELD created_at ON memory_record TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_until ON memory_record TYPE option<datetime>;
 DEFINE INDEX idx_memory_kind ON memory_record FIELDS kind;
 DEFINE INDEX idx_memory_status ON memory_record FIELDS status;
+DEFINE INDEX memory_vector_idx ON memory_record FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
 
 DEFINE TABLE governs SCHEMAFULL;
 DEFINE FIELD in ON governs TYPE record<memory_record>;

@@ -28,6 +28,9 @@ pub enum Language {
     Cfg,
     Csv,
     Svg,
+    Svd,
+    LinkerScript,
+    Assembly,
 
     // Media & Assets (Metadata indexing)
     Image(ImageFormat),
@@ -118,6 +121,9 @@ impl Language {
             "gradle" => Self::Gradle,
             "dockerfile" => Self::Docker,
             "qemu" => Self::Qemu,
+            "svd" => Self::Svd,
+            "ld" => Self::LinkerScript,
+            "s" | "asm" => Self::Assembly,
 
             // Data & Config
             "json" | "jsonc" | "json5" => Self::Json,
@@ -181,6 +187,9 @@ impl Language {
             Self::Gradle => "gradle",
             Self::Docker => "docker",
             Self::Qemu => "qemu",
+            Self::Svd => "svd",
+            Self::LinkerScript => "linkerscript",
+            Self::Assembly => "assembly",
             Self::Json => "json",
             Self::Yaml => "yaml",
             Self::Toml => "toml",
