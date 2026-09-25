@@ -62,3 +62,16 @@ pub fn get_extractor(lang: Language) -> Option<Box<dyn LanguageExtractor + Send 
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod test_syntax {
+    #[test]
+    fn test_lang_symbols() {
+        let _ = tree_sitter_json::LANGUAGE;
+        let _ = tree_sitter_yaml::LANGUAGE;
+        let _ = tree_sitter_html::LANGUAGE;
+        let _ = tree_sitter_css::LANGUAGE;
+        let _ = tree_sitter_md::LANGUAGE;
+    }
+}
+
