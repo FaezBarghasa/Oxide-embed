@@ -46,7 +46,7 @@ fn traverse_node(
         let end_point = node.end_position();
 
         let val_n = node.child_by_field_name("value");
-        let is_container = val_n.map_or(false, |v| v.kind() == "object" || v.kind() == "array");
+        let is_container = val_n.is_some_and(|v| v.kind() == "object" || v.kind() == "array");
         let kind = if is_container {
             SymbolKind::Struct
         } else {

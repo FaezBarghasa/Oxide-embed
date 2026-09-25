@@ -342,7 +342,7 @@ impl LanguageExtractor for GenericConfigExtractor {
                         symbols.push(SymbolRecord {
                             id: SymbolId::new(file_id, name),
                             file_id: file_id.clone(),
-                            kind: if is_task { SymbolKind::Function } else { SymbolKind::Function },
+                            kind: SymbolKind::Function,
                             name: name.to_string(),
                             qualified_name: Some(name.to_string()),
                             start_line: line_no,
