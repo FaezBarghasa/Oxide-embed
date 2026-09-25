@@ -31,6 +31,8 @@ pub enum Language {
     Svd,
     LinkerScript,
     Assembly,
+    SystemVerilog,
+    OpenScad,
 
     // Media & Assets (Metadata indexing)
     Image(ImageFormat),
@@ -124,6 +126,8 @@ impl Language {
             "svd" => Self::Svd,
             "ld" => Self::LinkerScript,
             "s" | "asm" => Self::Assembly,
+            "sv" | "svh" | "v" | "vh" => Self::SystemVerilog,
+            "scad" => Self::OpenScad,
 
             // Data & Config
             "json" | "jsonc" | "json5" => Self::Json,
@@ -190,6 +194,8 @@ impl Language {
             Self::Svd => "svd",
             Self::LinkerScript => "linkerscript",
             Self::Assembly => "assembly",
+            Self::SystemVerilog => "systemverilog",
+            Self::OpenScad => "openscad",
             Self::Json => "json",
             Self::Yaml => "yaml",
             Self::Toml => "toml",

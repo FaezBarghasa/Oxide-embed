@@ -286,6 +286,127 @@ impl LanguageExtractor for GenericConfigExtractor {
                 });
             }
 
+            // SystemVerilog (module, interface, package, task, function)
+            if self.language == Language::SystemVerilog {
+                let line_no = idx + 1;
+                if trimmed.starts_with("module ") {
+                    let rest = trimmed.trim_start_matches("module ").trim();
+                    let name = rest.split(['#', '(', ';', ' ']).next().unwrap_or("").trim();
+                    if !name.is_empty() {
+                        symbols.push(SymbolRecord {
+                            id: SymbolId::new(file_id, name),
+                            file_id: file_id.clone(),
+                            kind: SymbolKind::Module,
+                            name: name.to_string(),
+                            qualified_name: Some(name.to_string()),
+                            start_line: line_no,
+                            end_line: line_no,
+                            signature: Some(trimmed.to_string()),
+                            doc: None,
+                            fingerprint: format!("sv_module:{}:{}", name, line_no),
+                            is_macro_node: true,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: Some(format!("SystemVerilog module {} at line {}", name, line_no)),
+                        });
+                    }
+                } else if trimmed.starts_with("interface ") {
+                    let rest = trimmed.trim_start_matches("interface ").trim();
+                    let name = rest.split(['#', '(', ';', ' ']).next().unwrap_or("").trim();
+                    if !name.is_empty() {
+                        symbols.push(SymbolRecord {
+                            id: SymbolId::new(file_id, name),
+                            file_id: file_id.clone(),
+                            kind: SymbolKind::Interface,
+                            name: name.to_string(),
+                            qualified_name: Some(name.to_string()),
+                            start_line: line_no,
+                            end_line: line_no,
+                            signature: Some(trimmed.to_string()),
+                            doc: None,
+                            fingerprint: format!("sv_if:{}:{}", name, line_no),
+                            is_macro_node: true,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: None,
+                        });
+                    }
+                } else if trimmed.starts_with("task ") || trimmed.starts_with("function ") {
+                    let is_task = trimmed.starts_with("task ");
+                    let keyword = if is_task { "task " } else { "function " };
+                    let rest = trimmed.trim_start_matches(keyword).trim();
+                    let cleaned = rest.trim_start_matches("automatic ").trim();
+                    let before_paren = cleaned.split('(').next().unwrap_or("").trim();
+                    let name = before_paren.split_whitespace().next_back().unwrap_or("").trim_end_matches(';');
+                    if !name.is_empty() {
+                        symbols.push(SymbolRecord {
+                            id: SymbolId::new(file_id, name),
+                            file_id: file_id.clone(),
+                            kind: if is_task { SymbolKind::Function } else { SymbolKind::Function },
+                            name: name.to_string(),
+                            qualified_name: Some(name.to_string()),
+                            start_line: line_no,
+                            end_line: line_no,
+                            signature: Some(trimmed.to_string()),
+                            doc: None,
+                            fingerprint: format!("sv_fn:{}:{}", name, line_no),
+                            is_macro_node: false,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: None,
+                        });
+                    }
+                }
+            }
+
+            // OpenSCAD (module, function)
+            if self.language == Language::OpenScad {
+                let line_no = idx + 1;
+                if trimmed.starts_with("module ") {
+                    let rest = trimmed.trim_start_matches("module ").trim();
+                    let name = rest.split('(').next().unwrap_or("").trim();
+                    if !name.is_empty() {
+                        symbols.push(SymbolRecord {
+                            id: SymbolId::new(file_id, name),
+                            file_id: file_id.clone(),
+                            kind: SymbolKind::Module,
+                            name: name.to_string(),
+                            qualified_name: Some(name.to_string()),
+                            start_line: line_no,
+                            end_line: line_no,
+                            signature: Some(trimmed.to_string()),
+                            doc: None,
+                            fingerprint: format!("scad_mod:{}:{}", name, line_no),
+                            is_macro_node: true,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: None,
+                        });
+                    }
+                } else if trimmed.starts_with("function ") {
+                    let rest = trimmed.trim_start_matches("function ").trim();
+                    let name = rest.split('(').next().unwrap_or("").trim();
+                    if !name.is_empty() {
+                        symbols.push(SymbolRecord {
+                            id: SymbolId::new(file_id, name),
+                            file_id: file_id.clone(),
+                            kind: SymbolKind::Function,
+                            name: name.to_string(),
+                            qualified_name: Some(name.to_string()),
+                            start_line: line_no,
+                            end_line: line_no,
+                            signature: Some(trimmed.to_string()),
+                            doc: None,
+                            fingerprint: format!("scad_fn:{}:{}", name, line_no),
+                            is_macro_node: false,
+                            parent_id: None,
+                            breadcrumbs: vec![name.to_string()],
+                            summary: None,
+                        });
+                    }
+                }
+            }
+
             // YAML / TOML / CFG / INI Top-Level Sections
             if (self.language == Language::Toml
                 || self.language == Language::Cfg
