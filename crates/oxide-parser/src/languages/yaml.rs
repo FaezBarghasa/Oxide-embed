@@ -48,10 +48,11 @@ fn traverse_node(
             let end_point = node.end_position();
 
             let val_n = node.child_by_field_name("value");
-            let is_container = val_n.map_or(false, |v| {
+            let is_container = val_n.is_some_and(|v| {
                 let vk = v.kind();
                 vk == "block_mapping" || vk == "block_sequence" || vk == "flow_mapping" || vk == "flow_sequence"
             });
+
 
             let kind = if is_container {
                 SymbolKind::Struct

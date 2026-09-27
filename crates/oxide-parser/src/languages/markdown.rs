@@ -32,35 +32,36 @@ impl LanguageExtractor for MarkdownExtractor {
 
 fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<SymbolRecord>) {
     let kind = node.kind();
-    if kind.contains("heading") || kind == "atx_heading" || kind == "setext_heading" {
-        if let Ok(text) = node.utf8_text(content.as_bytes()) {
-            let line = text.lines().next().unwrap_or("").trim();
-            let heading_text = line.trim_start_matches('#').trim();
-            if !heading_text.is_empty() {
-                let start_point = node.start_position();
-                let end_point = node.end_position();
-                let fingerprint = format!("md:{}:{}-{}", heading_text, start_point.row + 1, end_point.row + 1);
-                let symbol_id = SymbolId::new(file_id, heading_text);
+    if (kind.contains("heading") || kind == "atx_heading" || kind == "setext_heading")
+        && let Ok(text) = node.utf8_text(content.as_bytes())
+    {
+        let line = text.lines().next().unwrap_or("").trim();
+        let heading_text = line.trim_start_matches('#').trim();
+        if !heading_text.is_empty() {
+            let start_point = node.start_position();
+            let end_point = node.end_position();
+            let fingerprint = format!("md:{}:{}-{}", heading_text, start_point.row + 1, end_point.row + 1);
+            let symbol_id = SymbolId::new(file_id, heading_text);
 
-                symbols.push(SymbolRecord {
-                    id: symbol_id,
-                    file_id: file_id.clone(),
-                    kind: SymbolKind::Module,
-                    name: heading_text.to_string(),
-                    qualified_name: Some(heading_text.to_string()),
-                    start_line: start_point.row + 1,
-                    end_line: end_point.row + 1,
-                    signature: Some(line.to_string()),
-                    doc: None,
-                    fingerprint,
-                    is_macro_node: false,
-                    parent_id: None,
-                    breadcrumbs: vec![heading_text.to_string()],
-                    summary: Some(format!("Heading: {}", heading_text)),
-                });
-            }
+            symbols.push(SymbolRecord {
+                id: symbol_id,
+                file_id: file_id.clone(),
+                kind: SymbolKind::Module,
+                name: heading_text.to_string(),
+                qualified_name: Some(heading_text.to_string()),
+                start_line: start_point.row + 1,
+                end_line: end_point.row + 1,
+                signature: Some(line.to_string()),
+                doc: None,
+                fingerprint,
+                is_macro_node: false,
+                parent_id: None,
+                breadcrumbs: vec![heading_text.to_string()],
+                summary: Some(format!("Heading: {}", heading_text)),
+            });
         }
     }
+
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
