@@ -150,6 +150,60 @@ struct ConflictRow {
     score: Option<f32>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct MentalModelRow {
+    id: serde_json::Value,
+    topic: String,
+    question: String,
+    standing_answer: String,
+    #[serde(default)]
+    referenced_symbols: Vec<String>,
+    #[serde(default)]
+    referenced_files: Vec<String>,
+    #[serde(default)]
+    source_memory_ids: Vec<String>,
+    #[serde(default)]
+    file_hashes_snapshot: std::collections::HashMap<String, String>,
+    #[serde(default)]
+    is_stale: bool,
+    last_refreshed_at: DateTime<Utc>,
+    #[serde(default)]
+    embedding: Option<Vec<f32>>,
+}
+
+impl MentalModelRow {
+    fn into_mental_model(self) -> Result<oxide_core::MentalModel> {
+        let raw_id = match &self.id {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Object(map) => map
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            _ => self.id.to_string(),
+        };
+        let clean_id = raw_id
+            .replace("mental_model:", "")
+            .replace(['`', '"'], "")
+            .trim()
+            .to_string();
+
+        Ok(oxide_core::MentalModel {
+            id: oxide_core::ModelId::from_string(clean_id),
+            topic: self.topic,
+            question: self.question,
+            standing_answer: self.standing_answer,
+            referenced_symbols: self.referenced_symbols,
+            referenced_files: self.referenced_files,
+            source_memory_ids: self.source_memory_ids,
+            file_hashes_snapshot: self.file_hashes_snapshot,
+            is_stale: self.is_stale,
+            last_refreshed_at: self.last_refreshed_at,
+            embedding: self.embedding,
+        })
+    }
+}
+
 #[async_trait]
 impl ProjectStore for SurrealProjectStore {
     async fn open<P: AsRef<Path> + Send + Sync>(path: P) -> Result<Self> {
@@ -912,6 +966,118 @@ impl ProjectStore for SurrealProjectStore {
         Ok(rows.into_iter().next().map(|r| r.count).unwrap_or(0))
     }
 
+    async fn upsert_mental_model(&self, model: &oxide_core::MentalModel) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('mental_model', $id) SET
+                topic = $topic,
+                question = $question,
+                standing_answer = $standing_answer,
+                referenced_symbols = $referenced_symbols,
+                referenced_files = $referenced_files,
+                source_memory_ids = $source_memory_ids,
+                file_hashes_snapshot = $file_hashes_snapshot,
+                is_stale = $is_stale,
+                last_refreshed_at = $last_refreshed_at,
+                embedding = $embedding;
+        "#;
+        self.db
+            .query(sql)
+            .bind(("id", model.id.0.clone()))
+            .bind(("topic", model.topic.clone()))
+            .bind(("question", model.question.clone()))
+            .bind(("standing_answer", model.standing_answer.clone()))
+            .bind(("referenced_symbols", model.referenced_symbols.clone()))
+            .bind(("referenced_files", model.referenced_files.clone()))
+            .bind(("source_memory_ids", model.source_memory_ids.clone()))
+            .bind((
+                "file_hashes_snapshot",
+                serde_json::to_value(&model.file_hashes_snapshot).unwrap_or_default(),
+            ))
+            .bind(("is_stale", model.is_stale))
+            .bind(("last_refreshed_at", model.last_refreshed_at.to_rfc3339()))
+            .bind(("embedding", model.embedding.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+
+        for sym_name in &model.referenced_symbols {
+            let edge_sql = r#"
+                RELATE (SELECT id FROM type::record('mental_model', $id))->model_references->(SELECT id FROM symbol WHERE name = $sym_name OR qualified_name = $sym_name LIMIT 1);
+            "#;
+            let _ = self
+                .db
+                .query(edge_sql)
+                .bind(("id", model.id.0.clone()))
+                .bind(("sym_name", sym_name.clone()))
+                .await;
+        }
+
+        Ok(())
+    }
+
+    async fn get_mental_model(&self, topic: &str) -> Result<Option<oxide_core::MentalModel>> {
+        let sql = "SELECT * FROM mental_model WHERE topic = $topic LIMIT 1;";
+        let mut res = self
+            .db
+            .query(sql)
+            .bind(("topic", topic.to_string()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MentalModelRow> = take_vec(&mut res, 0)?;
+        if let Some(row) = rows.into_iter().next() {
+            Ok(Some(row.into_mental_model()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn list_mental_models(&self) -> Result<Vec<oxide_core::MentalModel>> {
+        let sql = "SELECT * FROM mental_model ORDER BY last_refreshed_at DESC;";
+        let mut res = self
+            .db
+            .query(sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MentalModelRow> = take_vec(&mut res, 0)?;
+        let mut models = Vec::with_capacity(rows.len());
+        for row in rows {
+            models.push(row.into_mental_model()?);
+        }
+        Ok(models)
+    }
+
+    async fn search_mental_models(
+        &self,
+        query_emb: &[f32],
+        limit: usize,
+    ) -> Result<Vec<oxide_core::MentalModel>> {
+        let sql = "SELECT *, vector::similarity::cosine(embedding, $emb) AS score FROM mental_model WHERE embedding IS NOT NONE ORDER BY score DESC LIMIT $limit;";
+        let mut res = self
+            .db
+            .query(sql)
+            .bind(("emb", query_emb.to_vec()))
+            .bind(("limit", limit as i64))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let rows: Vec<MentalModelRow> = take_vec(&mut res, 0)?;
+        let mut models = Vec::with_capacity(rows.len());
+        for row in rows {
+            models.push(row.into_mental_model()?);
+        }
+        Ok(models)
+    }
+
+    async fn mark_mental_models_stale_for_files(&self, file_paths: &[String]) -> Result<usize> {
+        let mut count = 0;
+        for path in file_paths {
+            let sql = "UPDATE mental_model SET is_stale = true WHERE $path IN referenced_files AND is_stale = false;";
+            if let Ok(mut res) = self.db.query(sql).bind(("path", path.clone())).await {
+                let updated: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
+                count += updated.len();
+            }
+        }
+        Ok(count)
+    }
+
     async fn export_surql(&self) -> Result<String> {
         let dump_table = |tbl: &'static str| {
             let db = self.db.clone();
@@ -937,6 +1103,8 @@ impl ProjectStore for SurrealProjectStore {
         let doc_references = dump_table("doc_reference").await?;
         let cerebrum_rules = dump_table("cerebrum_rule").await?;
         let procedural_skills = dump_table("procedural_skill").await?;
+        let mental_models = dump_table("mental_model").await?;
+        let model_references = dump_table("model_references").await?;
 
         let dump = serde_json::json!({
             "files": files,
@@ -949,6 +1117,8 @@ impl ProjectStore for SurrealProjectStore {
             "doc_references": doc_references,
             "cerebrum_rules": cerebrum_rules,
             "procedural_skills": procedural_skills,
+            "mental_models": mental_models,
+            "model_references": model_references,
         });
 
         serde_json::to_string_pretty(&dump).map_err(|e| OxideError::Database(e.to_string()))
@@ -969,6 +1139,8 @@ impl ProjectStore for SurrealProjectStore {
             ("doc_references", "doc_reference"),
             ("cerebrum_rules", "cerebrum_rule"),
             ("procedural_skills", "procedural_skill"),
+            ("mental_models", "mental_model"),
+            ("model_references", "model_references"),
         ];
 
         for (json_key, table_name) in tables {

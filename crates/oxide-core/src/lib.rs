@@ -16,7 +16,9 @@ pub mod manifest;
 pub mod markdown_sync;
 pub mod memify;
 pub mod memory;
+pub mod model;
 pub mod read_guard;
+pub mod retrieval;
 pub mod symbol;
 
 pub use answer::{AnswerCitation, AnswerSynthesizer, GroundedAnswer};
@@ -33,13 +35,15 @@ pub use embedding::{EmbeddingMetadata, PoolingMethod};
 pub use error::{OxideError, Result};
 pub use file::FileRecord;
 pub use handoff::HandoffCheckpoint;
-pub use id::{ChunkId, FileId, MemoryId, ProjectId, SymbolId, WorkspaceId};
+pub use id::{ChunkId, FileId, MemoryId, ModelId, ProjectId, SymbolId, WorkspaceId};
 pub use ledger::{TokenLedger, TokenSavingRecord, TokenUsageRecord};
 pub use manifest::{OxideManifest, resolve_db_path};
 pub use markdown_sync::MarkdownMemorySync;
 pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
 pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus, ProceduralSkill};
+pub use model::MentalModel;
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
+pub use retrieval::{FusedItem, RrfCandidate, RrfScorer};
 pub use symbol::{
     CallEdge, ImportEdge, StairHit, SymbolKind, SymbolRecord, deserialize_null_as_empty_vec,
     deserialize_null_as_false,

@@ -205,4 +205,25 @@ DEFINE FIELD embedding ON procedural_skill TYPE option<array<float>>;
 DEFINE INDEX idx_skill_name ON procedural_skill FIELDS name UNIQUE;
 DEFINE INDEX idx_skill_status ON procedural_skill FIELDS status;
 DEFINE INDEX skill_vector_idx ON procedural_skill FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
+
+-- Mental Models (Standing Architectural Syntheses)
+DEFINE TABLE mental_model SCHEMAFULL;
+DEFINE FIELD topic ON mental_model TYPE string;
+DEFINE FIELD question ON mental_model TYPE string;
+DEFINE FIELD standing_answer ON mental_model TYPE string;
+DEFINE FIELD referenced_symbols ON mental_model TYPE array<string> DEFAULT [];
+DEFINE FIELD referenced_files ON mental_model TYPE array<string> DEFAULT [];
+DEFINE FIELD source_memory_ids ON mental_model TYPE array<string> DEFAULT [];
+DEFINE FIELD file_hashes_snapshot ON mental_model TYPE object DEFAULT {};
+DEFINE FIELD is_stale ON mental_model TYPE bool DEFAULT false;
+DEFINE FIELD last_refreshed_at ON mental_model TYPE datetime DEFAULT time::now();
+DEFINE FIELD embedding ON mental_model TYPE option<array<float>>;
+DEFINE INDEX idx_model_topic ON mental_model FIELDS topic UNIQUE;
+DEFINE INDEX idx_model_stale ON mental_model FIELDS is_stale;
+DEFINE INDEX model_vector_idx ON mental_model FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
+
+DEFINE TABLE model_references SCHEMAFULL;
+DEFINE FIELD in ON model_references TYPE record<mental_model>;
+DEFINE FIELD out ON model_references TYPE record<symbol>;
+DEFINE FIELD created_at ON model_references TYPE datetime DEFAULT time::now();
 "#;

@@ -77,6 +77,17 @@ pub trait ProjectStore: Send + Sync {
     async fn count_symbols(&self) -> Result<usize>;
     async fn count_chunks(&self) -> Result<usize>;
 
+    // Mental Models (Hindsight parity)
+    async fn upsert_mental_model(&self, model: &oxide_core::MentalModel) -> Result<()>;
+    async fn get_mental_model(&self, topic: &str) -> Result<Option<oxide_core::MentalModel>>;
+    async fn list_mental_models(&self) -> Result<Vec<oxide_core::MentalModel>>;
+    async fn search_mental_models(
+        &self,
+        query_emb: &[f32],
+        limit: usize,
+    ) -> Result<Vec<oxide_core::MentalModel>>;
+    async fn mark_mental_models_stale_for_files(&self, file_paths: &[String]) -> Result<usize>;
+
     async fn export_surql(&self) -> Result<String>;
     async fn import_surql(&self, content: &str) -> Result<()>;
 }
