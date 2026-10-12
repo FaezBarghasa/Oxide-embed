@@ -99,7 +99,7 @@ pub async fn handle_index(
 
         store.upsert_file(file_record).await?;
         let _ = store
-            .mark_mental_models_stale_for_files(&[file_record.relative_path.clone()])
+            .mark_mental_models_stale_for_files(std::slice::from_ref(&file_record.relative_path))
             .await;
 
         let lang = Language::from_path(&file_record.relative_path);

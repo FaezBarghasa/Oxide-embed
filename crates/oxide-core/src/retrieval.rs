@@ -59,6 +59,14 @@ impl Default for RrfScorer {
     }
 }
 
+type CandidateRanks = (
+    RrfCandidate,
+    Option<usize>,
+    Option<usize>,
+    Option<usize>,
+    Option<usize>,
+);
+
 impl RrfScorer {
     pub fn new(k: f32, w_vec: f32, w_lex: f32, w_graph: f32, w_temp: f32) -> Self {
         Self {
@@ -78,16 +86,7 @@ impl RrfScorer {
         graph_ranked: &[RrfCandidate],
         temporal_ranked: &[RrfCandidate],
     ) -> Vec<FusedItem> {
-        let mut map: HashMap<
-            String,
-            (
-                RrfCandidate,
-                Option<usize>,
-                Option<usize>,
-                Option<usize>,
-                Option<usize>,
-            ),
-        > = HashMap::new();
+        let mut map: HashMap<String, CandidateRanks> = HashMap::new();
 
         for (rank, item) in vector_ranked.iter().enumerate() {
             let entry = map

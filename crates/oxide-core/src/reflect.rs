@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::budget::{BudgetItem, TokenBudgetPacker, TokenEstimator};
+use crate::budget::{TokenBudgetPacker, TokenEstimator};
 use crate::model::MentalModel;
-use crate::retrieval::{FusedItem, RrfCandidate, RrfScorer};
+use crate::retrieval::{FusedItem, RrfScorer};
 
 /// The result of a reflect operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,8 +62,7 @@ impl ReflectEngine {
             .map(|item| item.to_budget_candidate())
             .collect();
 
-        let packer = TokenBudgetPacker::new(self.token_budget);
-        let packed = packer.pack(&budget_candidates);
+        let packed = TokenBudgetPacker::pack(budget_candidates, self.token_budget);
 
         let mut citations = Vec::new();
         let mut evidence_md = String::new();
@@ -71,7 +70,7 @@ impl ReflectEngine {
         evidence_md.push_str(&format!("# Reflection: {}\n\n", query));
         evidence_md.push_str("## Grounded Evidence\n\n");
 
-        for item in &packed.selected {
+        for item in &packed.included {
             citations.push(item.id.clone());
             evidence_md.push_str(&format!("### {}\n", item.title));
             evidence_md.push_str(&item.content);

@@ -1185,11 +1185,15 @@ impl McpServer {
                 if let Ok(stair_hits) = st.stair_search(query, 20).await {
                     for hit in stair_hits {
                         lexical_ranked.push(oxide_core::RrfCandidate {
-                            key: format!("{}:{}", hit.file_path, hit.symbol_name),
-                            title: hit.symbol_name.clone(),
-                            content: format!("Signature: {}\nDoc: {}", hit.signature.unwrap_or_default(), hit.doc.unwrap_or_default()),
+                            key: format!("{}:{}", hit.file_path, hit.leaf_symbol),
+                            title: hit.leaf_symbol.clone(),
+                            content: format!(
+                                "Signature: {}\nCode: {}",
+                                hit.signature.unwrap_or_default(),
+                                hit.code_body
+                            ),
                             source_type: "stair_symbol".to_string(),
-                            raw_score: 1.0,
+                            raw_score: hit.confidence,
                             file_path: Some(hit.file_path),
                             start_line: Some(hit.start_line),
                             end_line: Some(hit.end_line),

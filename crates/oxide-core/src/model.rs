@@ -84,7 +84,7 @@ impl MentalModel {
             for sym in &self.referenced_symbols {
                 md.push_str(&format!("- `{}`\n", sym));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
 
         if !self.referenced_files.is_empty() {
@@ -92,7 +92,7 @@ impl MentalModel {
             for file in &self.referenced_files {
                 md.push_str(&format!("- `{}`\n", file));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
 
         md.push_str(&format!(

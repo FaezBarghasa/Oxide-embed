@@ -1,8 +1,7 @@
-use anyhow::Result;
-use oxide_core::error::OxideError;
-use oxide_core::{OxideManifest, ReflectEngine, RrfCandidate, SearchQuery};
-use oxide_db::{ProjectStore, SurrealProjectStore};
-use oxide_ml::CandleEmbedder;
+use oxide_core::error::{OxideError, Result};
+use oxide_core::{OxideManifest, ReflectEngine, RrfCandidate};
+use oxide_db::{ProjectStore, SearchQuery, SurrealProjectStore};
+use oxide_ml::{CandleBertEmbedder, Embedder};
 use std::path::Path;
 
 pub async fn handle_reflect(
@@ -13,14 +12,14 @@ pub async fn handle_reflect(
 ) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.to_path_buf()).into());
+        return Err(OxideError::NotInitialized(project_root.to_path_buf()));
     }
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let db_path = oxide_dir.join(&manifest.storage.path);
     let store = SurrealProjectStore::open(&db_path).await?;
 
-    let embedder = CandleEmbedder::new_bge_small()?;
+    let embedder = CandleBertEmbedder::new_offline();
     let query_emb = embedder.embed(query).await?;
 
     let engine = ReflectEngine::new(token_budget);
@@ -29,7 +28,10 @@ pub async fn handle_reflect(
     if !force_fresh {
         let matching_models = store.search_mental_models(&query_emb, 3).await?;
         if let Some(model) = engine.resolve_standing_model(&matching_models) {
-            println!("💡 [Mental Model Hit (Zero-Token Synthesis)]: {}\n", model.topic);
+            println!(
+                "💡 [Mental Model Hit (Zero-Token Synthesis)]: {}\n",
+                model.topic
+            );
             println!("{}", model.to_markdown());
             return Ok(());
         }
@@ -67,15 +69,15 @@ pub async fn handle_reflect(
     let lexical_ranked: Vec<RrfCandidate> = stair_hits
         .into_iter()
         .map(|hit| RrfCandidate {
-            key: format!("{}:{}", hit.file_path, hit.symbol_name),
-            title: hit.symbol_name.clone(),
+            key: format!("{}:{}", hit.file_path, hit.leaf_symbol),
+            title: hit.leaf_symbol.clone(),
             content: format!(
-                "Signature: {}\nDoc: {}",
+                "Signature: {}\nCode: {}",
                 hit.signature.unwrap_or_default(),
-                hit.doc.unwrap_or_default()
+                hit.code_body
             ),
             source_type: "stair_symbol".to_string(),
-            raw_score: 1.0,
+            raw_score: hit.confidence,
             file_path: Some(hit.file_path),
             start_line: Some(hit.start_line),
             end_line: Some(hit.end_line),

@@ -1,8 +1,7 @@
-use anyhow::Result;
-use oxide_core::error::OxideError;
+use oxide_core::error::{OxideError, Result};
 use oxide_core::{MentalModel, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
-use oxide_ml::CandleEmbedder;
+use oxide_ml::{CandleBertEmbedder, Embedder};
 use std::path::Path;
 
 pub async fn handle_model_create(
@@ -15,7 +14,7 @@ pub async fn handle_model_create(
 ) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.to_path_buf()).into());
+        return Err(OxideError::NotInitialized(project_root.to_path_buf()));
     }
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
@@ -26,7 +25,7 @@ pub async fn handle_model_create(
     model.referenced_symbols = symbols;
     model.referenced_files = files;
 
-    let embedder = CandleEmbedder::new_bge_small()?;
+    let embedder = CandleBertEmbedder::new_offline();
     let text_to_embed = format!("{}: {} {}", topic, question, answer);
     if let Ok(emb) = embedder.embed(&text_to_embed).await {
         model.embedding = Some(emb);
@@ -41,7 +40,7 @@ pub async fn handle_model_create(
 pub async fn handle_model_list(project_root: &Path) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.to_path_buf()).into());
+        return Err(OxideError::NotInitialized(project_root.to_path_buf()));
     }
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
@@ -85,7 +84,7 @@ pub async fn handle_model_list(project_root: &Path) -> Result<()> {
 pub async fn handle_model_get(project_root: &Path, topic: &str) -> Result<()> {
     let oxide_dir = project_root.join(".oxide");
     if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.to_path_buf()).into());
+        return Err(OxideError::NotInitialized(project_root.to_path_buf()));
     }
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
