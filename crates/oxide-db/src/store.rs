@@ -35,6 +35,7 @@ pub trait ProjectStore: Send + Sync {
     async fn upsert_file(&self, file: &FileRecord) -> Result<()>;
     async fn upsert_symbol(&self, symbol: &SymbolRecord) -> Result<()>;
     async fn upsert_chunk(&self, chunk: &ChunkRecord) -> Result<()>;
+    async fn upsert_chunks_batch(&self, chunks: &[ChunkRecord]) -> Result<()>;
     async fn upsert_doc_section(&self, section: &oxide_core::DocSection) -> Result<()>;
     async fn upsert_doc_reference(&self, edge: &oxide_core::DocReferenceEdge) -> Result<()>;
     async fn upsert_call_edge(&self, edge: &oxide_core::CallEdge) -> Result<()>;

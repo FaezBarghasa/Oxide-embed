@@ -331,6 +331,60 @@ impl ProjectStore for SurrealProjectStore {
         Ok(())
     }
 
+    async fn upsert_chunks_batch(&self, chunks: &[ChunkRecord]) -> Result<()> {
+        if chunks.is_empty() {
+            return Ok(());
+        }
+
+        for batch in chunks.chunks(50) {
+            let mut query_str = String::from("BEGIN TRANSACTION;\n");
+            for (idx, _) in batch.iter().enumerate() {
+                query_str.push_str(&format!(
+                    "UPSERT type::record('chunk', $id_{idx}) SET
+                        file_id = $file_id_{idx},
+                        symbol_id = $symbol_id_{idx},
+                        kind = $kind_{idx},
+                        text = $text_{idx},
+                        outline = $outline_{idx},
+                        content_hash = $content_hash_{idx},
+                        start_line = $start_line_{idx},
+                        end_line = $end_line_{idx},
+                        embedding = $embedding_{idx},
+                        embedding_model = $embedding_model_{idx},
+                        embedding_dim = $embedding_dim_{idx},
+                        vector_set_id = $vector_set_id_{idx},
+                        updated_at = time::now();\n"
+                ));
+            }
+            query_str.push_str("COMMIT TRANSACTION;");
+
+            let mut query = self.db.query(query_str);
+            for (idx, chunk) in batch.iter().enumerate() {
+                let id_str = chunk.id.to_string();
+                query = query
+                    .bind((format!("id_{idx}"), id_str))
+                    .bind((format!("file_id_{idx}"), chunk.file_id.0.clone()))
+                    .bind((format!("symbol_id_{idx}"), chunk.symbol_id.as_ref().map(|s| s.0.clone())))
+                    .bind((format!("kind_{idx}"), chunk.kind.as_str()))
+                    .bind((format!("text_{idx}"), chunk.text.clone()))
+                    .bind((format!("outline_{idx}"), chunk.outline.clone()))
+                    .bind((format!("content_hash_{idx}"), chunk.content_hash.clone()))
+                    .bind((format!("start_line_{idx}"), chunk.start_line as i64))
+                    .bind((format!("end_line_{idx}"), chunk.end_line as i64))
+                    .bind((format!("embedding_{idx}"), chunk.embedding.clone()))
+                    .bind((format!("embedding_model_{idx}"), chunk.embedding_model.clone()))
+                    .bind((format!("embedding_dim_{idx}"), chunk.embedding_dim.map(|d| d as i64)))
+                    .bind((format!("vector_set_id_{idx}"), chunk.vector_set_id.clone()));
+            }
+
+            query
+                .await
+                .map_err(|e| OxideError::Database(e.to_string()))?;
+        }
+
+        Ok(())
+    }
+
     async fn upsert_doc_section(&self, section: &oxide_core::DocSection) -> Result<()> {
         let sql = r#"
             UPSERT type::record('doc_section', $id) SET

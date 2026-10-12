@@ -146,9 +146,9 @@ pub async fn handle_index(
                 chunk.embedding_model = Some(manifest.embedding.model.clone());
                 chunk.embedding_dim = Some(embedder.dimension());
                 chunk.vector_set_id = Some(manifest.embedding.vector_set_id.clone());
-
-                store.upsert_chunk(chunk).await?;
             }
+
+            store.upsert_chunks_batch(chunk_batch).await?;
             total_chunks += chunk_batch.len();
         }
     }
