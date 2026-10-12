@@ -1,7 +1,7 @@
 use oxide_core::error::{OxideError, Result};
 use oxide_core::{TerminalCondenser, TokenLedger};
 use std::path::Path;
-use std::process::Command;
+use tokio::process::Command;
 
 pub async fn handle_run(project_root: &Path, command_args: &[String]) -> Result<()> {
     if command_args.is_empty() {
@@ -18,6 +18,7 @@ pub async fn handle_run(project_root: &Path, command_args: &[String]) -> Result<
         .args(args)
         .current_dir(project_root)
         .output()
+        .await
         .map_err(|e| {
             OxideError::Config(format!("Failed to execute command '{}': {}", program, e))
         })?;
@@ -66,7 +67,10 @@ pub async fn handle_run(project_root: &Path, command_args: &[String]) -> Result<
     }
 
     if exit_code != 0 {
-        std::process::exit(exit_code);
+        return Err(OxideError::Other(format!(
+            "Command exited with non-zero status code: {}",
+            exit_code
+        )));
     }
 
     Ok(())

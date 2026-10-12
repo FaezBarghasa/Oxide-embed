@@ -241,21 +241,24 @@ impl ConflictDetector {
         let ex_lower = existing.content.to_lowercase();
         let in_lower = incoming_content.to_lowercase();
 
-        // Contradiction patterns: (use X vs avoid X / don't use X / use Y instead of X)
-        let has_opposite_polarity = (ex_lower.contains("never ") && !in_lower.contains("never "))
+        // Contradiction patterns: require explicit opposing assertion pairs
+        let has_opposite_polarity = (ex_lower.contains("never ") && in_lower.contains("always "))
             || (ex_lower.contains("always ") && in_lower.contains("never "))
             || (ex_lower.contains("prefer ") && in_lower.contains("avoid "))
+            || (ex_lower.contains("avoid ") && in_lower.contains("prefer "))
             || (ex_lower.contains("use ") && in_lower.contains("do not use "))
-            || (ex_lower.contains("no_std") && in_lower.contains("with std"));
+            || (ex_lower.contains("do not use ") && in_lower.contains("use "))
+            || (ex_lower.contains("no_std") && in_lower.contains("with std"))
+            || (ex_lower.contains("with std") && in_lower.contains("no_std"));
 
         // If they share significant common words/tokens and opposite assertions
         let ex_words: std::collections::HashSet<&str> = ex_lower
             .split_whitespace()
-            .filter(|w| w.len() > 3)
+            .filter(|w| w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid")
             .collect();
         let in_words: std::collections::HashSet<&str> = in_lower
             .split_whitespace()
-            .filter(|w| w.len() > 3)
+            .filter(|w| w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid")
             .collect();
 
         let overlap = ex_words.intersection(&in_words).count();

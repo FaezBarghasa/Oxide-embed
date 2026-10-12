@@ -54,10 +54,27 @@ impl TuiApp {
                 for h in hits {
                     let fid = oxide_core::id::FileId::from_relative_path(&h.file_path);
                     let sym_id = oxide_core::id::SymbolId::new(&fid, &h.leaf_symbol);
+                    let kind = h
+                        .symbol_kind
+                        .as_deref()
+                        .map(|k| match k.to_lowercase().as_str() {
+                            "struct" => oxide_core::symbol::SymbolKind::Struct,
+                            "enum" => oxide_core::symbol::SymbolKind::Enum,
+                            "trait" => oxide_core::symbol::SymbolKind::Trait,
+                            "module" | "mod" => oxide_core::symbol::SymbolKind::Module,
+                            "class" => oxide_core::symbol::SymbolKind::Class,
+                            "interface" => oxide_core::symbol::SymbolKind::Interface,
+                            "const" | "constant" => oxide_core::symbol::SymbolKind::Constant,
+                            "type" | "typealias" => oxide_core::symbol::SymbolKind::TypeAlias,
+                            "method" => oxide_core::symbol::SymbolKind::Method,
+                            _ => oxide_core::symbol::SymbolKind::Function,
+                        })
+                        .unwrap_or(oxide_core::symbol::SymbolKind::Function);
+
                     symbols.push(SymbolRecord {
                         id: sym_id,
                         file_id: fid,
-                        kind: oxide_core::symbol::SymbolKind::Function,
+                        kind,
                         name: h.leaf_symbol,
                         qualified_name: None,
                         start_line: h.start_line,
@@ -194,12 +211,17 @@ async fn run_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut TuiApp,
 ) -> anyhow::Result<()> {
+    use crossterm::event::EventStream;
+    use tokio_stream::StreamExt;
+
+    let mut event_stream = EventStream::new();
+
     while !app.should_quit {
         terminal.draw(|f| ui(f, app))?;
 
-        if event::poll(Duration::from_millis(100))?
-            && let Event::Key(key) = event::read()?
-        {
+        tokio::select! {
+            maybe_event = event_stream.next() => {
+                if let Some(Ok(Event::Key(key))) = maybe_event {
             if app.search_mode {
                 match key.code {
                     KeyCode::Esc | KeyCode::Enter => {
@@ -235,7 +257,7 @@ async fn run_loop<B: ratatui::backend::Backend>(
                     KeyCode::Up | KeyCode::Char('k') => {
                         app.prev_symbol();
                     }
-                    _ => {}
+                    }
                 }
             }
         }

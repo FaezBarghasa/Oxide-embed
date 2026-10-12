@@ -10,11 +10,10 @@ impl TokenEstimator {
         if text.is_empty() {
             return 0;
         }
-        // Count whitespace-delimited words and structural punctuation
+        // Count characters and punctuation for code BPE calibration (~3.0 chars per token for code/identifiers)
         let char_count = text.chars().count();
         let word_count = text.split_whitespace().count();
-        // Heuristic blend: max(word_count, char_count / 4) + structural overhead
-        let base = (char_count as f64 / 3.8).ceil() as usize;
+        let base = (char_count as f64 / 3.0).ceil() as usize;
         base.max(word_count).max(1)
     }
 }
@@ -84,17 +83,25 @@ pub struct BudgetPackResult<T> {
 }
 
 /// Greedy Knapsack Token Budget Packer.
-/// Maximizes information density within strict token ceilings.
+/// Maximizes information density (score / tokens) within strict token ceilings.
 pub struct TokenBudgetPacker;
 
 impl TokenBudgetPacker {
     pub fn pack<T: BudgetItem + Clone>(items: Vec<T>, budget_tokens: usize) -> BudgetPackResult<T> {
         let mut sorted = items;
-        // Sort descending by score. Tie-break with smaller token footprint (higher density).
+        // Sort descending by value density (score / tokens).
+        // Tie-break with raw score, then smaller token footprint.
         sorted.sort_by(|a, b| {
-            b.score()
-                .partial_cmp(&a.score())
+            let density_a = a.score() / a.estimated_tokens().max(1) as f32;
+            let density_b = b.score() / b.estimated_tokens().max(1) as f32;
+            density_b
+                .partial_cmp(&density_a)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| {
+                    b.score()
+                        .partial_cmp(&a.score())
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
                 .then_with(|| a.estimated_tokens().cmp(&b.estimated_tokens()))
         });
 

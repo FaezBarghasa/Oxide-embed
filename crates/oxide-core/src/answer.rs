@@ -89,13 +89,24 @@ impl AnswerSynthesizer {
         }
 
         // 4. Budget check & formatting
-        let token_cost = TokenEstimator::estimate_tokens(&out);
+        let mut token_cost = TokenEstimator::estimate_tokens(&out);
         if token_cost > budget {
-            // Truncate cleanly
-            out.push_str(&format!(
-                "\n*(Truncated to fit {} token budget constraint)*\n",
-                budget
-            ));
+            let max_chars = budget.saturating_mul(3);
+            if out.len() > max_chars {
+                let mut truncated = String::new();
+                for (idx, ch) in out.char_indices() {
+                    if idx >= max_chars {
+                        break;
+                    }
+                    truncated.push(ch);
+                }
+                truncated.push_str(&format!(
+                    "\n\n*(Truncated to fit {} token budget constraint)*\n",
+                    budget
+                ));
+                out = truncated;
+                token_cost = TokenEstimator::estimate_tokens(&out);
+            }
         }
 
         GroundedAnswer {

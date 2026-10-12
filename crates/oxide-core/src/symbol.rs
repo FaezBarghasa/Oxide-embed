@@ -97,6 +97,8 @@ pub struct StairHit {
     pub code_body: String,
     pub confidence: f32,
     pub macro_parent: Option<String>,
+    #[serde(default)]
+    pub symbol_kind: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

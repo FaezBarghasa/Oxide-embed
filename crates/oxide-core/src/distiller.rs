@@ -25,37 +25,53 @@ impl MemoryDistiller {
 
         let first_line = trimmed.lines().next().unwrap_or(trimmed);
 
-        let (kind, title, content) = if let Some(rest) = first_line.strip_prefix("feat:") {
+        let strip_conventional = |line: &str, tag: &str| -> Option<String> {
+            let l = line.trim();
+            if let Some(rest) = l.strip_prefix(tag) {
+                if let Some(after_colon) = rest.strip_prefix(':') {
+                    return Some(after_colon.trim().to_string());
+                }
+                if rest.starts_with('(') {
+                    if let Some(idx) = rest.find("):") {
+                        return Some(rest[idx + 2..].trim().to_string());
+                    }
+                }
+            }
+            None
+        };
+
+        let (kind, title, content) = if let Some(rest) = strip_conventional(first_line, "feat") {
             (
                 MemoryKind::Decision,
-                rest.trim().to_string(),
+                rest,
                 format!("Commit {}: {}", commit_hash, trimmed),
             )
-        } else if let Some(rest) = first_line.strip_prefix("fix:") {
+        } else if let Some(rest) = strip_conventional(first_line, "fix") {
             (
                 MemoryKind::Error,
-                rest.trim().to_string(),
+                rest,
                 format!("Resolved issue in commit {}: {}", commit_hash, trimmed),
             )
-        } else if let Some(rest) = first_line.strip_prefix("refactor:") {
+        } else if let Some(rest) = strip_conventional(first_line, "refactor") {
             (
                 MemoryKind::Decision,
-                rest.trim().to_string(),
+                rest,
                 format!("Refactoring in commit {}: {}", commit_hash, trimmed),
             )
-        } else if let Some(rest) = first_line.strip_prefix("perf:") {
+        } else if let Some(rest) = strip_conventional(first_line, "perf") {
             (
                 MemoryKind::Learning,
-                rest.trim().to_string(),
+                rest,
                 format!("Performance optimization in {}: {}", commit_hash, trimmed),
             )
-        } else {
-            let rest = first_line.strip_prefix("docs:")?;
+        } else if let Some(rest) = strip_conventional(first_line, "docs") {
             (
                 MemoryKind::Fact,
-                rest.trim().to_string(),
+                rest,
                 format!("Documentation update in {}: {}", commit_hash, trimmed),
             )
+        } else {
+            return None;
         };
 
         let mut record = MemoryRecord::new(project_id, kind, title, content);

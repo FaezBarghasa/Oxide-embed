@@ -12,7 +12,6 @@ use oxide_parser::languages::get_extractor;
 use sha2::Digest;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::channel;
 use std::time::{Duration, Instant};
 
 pub struct WorkspaceWatcher {
@@ -46,9 +45,14 @@ impl WorkspaceWatcher {
         );
         println!("⚡ Incremental sub-millisecond AST re-indexing active. Press Ctrl+C to exit.");
 
-        let (tx, rx) = channel();
-        let mut watcher = RecommendedWatcher::new(tx, Config::default())
-            .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
+        let (tokio_tx, mut tokio_rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut watcher = RecommendedWatcher::new(
+            move |res| {
+                let _ = tokio_tx.send(res);
+            },
+            Config::default(),
+        )
+        .map_err(|e| OxideError::Io(std::io::Error::other(e.to_string())))?;
 
         watcher
             .watch(&self.workspace_dir, RecursiveMode::Recursive)
@@ -60,16 +64,23 @@ impl WorkspaceWatcher {
             std::collections::HashMap::new();
 
         loop {
-            // Drain incoming events with short timeout
-            while let Ok(event_res) = rx.recv_timeout(Duration::from_millis(200)) {
-                if let Ok(event) = event_res
-                    && matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_))
-                {
-                    for path in event.paths {
-                        if self.should_index(&path) {
-                            pending_files.insert(path);
+            // Asynchronously wait for event or debounce timer tick without blocking
+            tokio::select! {
+                maybe_event = tokio_rx.recv() => {
+                    match maybe_event {
+                        Some(Ok(event)) if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) => {
+                            for path in event.paths {
+                                if self.should_index(&path) {
+                                    pending_files.insert(path);
+                                }
+                            }
                         }
+                        Some(_) => {}
+                        None => break, // Channel closed
                     }
+                }
+                _ = tokio::time::sleep(Duration::from_millis(100)) => {
+                    // Periodic poll to check if debounce threshold met
                 }
             }
 

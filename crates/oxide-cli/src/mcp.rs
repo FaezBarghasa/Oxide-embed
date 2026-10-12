@@ -56,9 +56,11 @@ impl McpServer {
     }
 
     pub async fn run_stdio(&self) -> Result<()> {
-        let stdin = io::stdin();
-        let mut stdout = io::stdout();
-        let reader = stdin.lock();
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+        let stdin = tokio::io::stdin();
+        let mut stdout = tokio::io::stdout();
+        let mut reader = BufReader::new(stdin).lines();
 
         let store = if let Ok(db_path) = oxide_core::resolve_db_path(&self.workspace_dir) {
             SurrealProjectStore::open(&db_path).await.ok()
@@ -66,22 +68,23 @@ impl McpServer {
             None
         };
 
-        for line_res in reader.lines() {
-            let line = match line_res {
-                Ok(l) => l,
-                Err(_) => break,
-            };
-
+        while let Some(line) = reader.next_line().await? {
             let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
             }
 
             if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(trimmed) {
+                // Ignore notifications (requests without id) per JSON-RPC spec
+                if req.id.is_none() && req.method.starts_with("notifications/") {
+                    continue;
+                }
+
                 let resp = self.handle_request(&req, store.as_ref()).await;
                 if let Ok(json_str) = serde_json::to_string(&resp) {
-                    let _ = writeln!(stdout, "{}", json_str);
-                    let _ = stdout.flush();
+                    let _ = stdout.write_all(json_str.as_bytes()).await;
+                    let _ = stdout.write_all(b"\n").await;
+                    let _ = stdout.flush().await;
                 }
             }
         }
@@ -291,12 +294,16 @@ impl McpServer {
                     Err(e) => JsonRpcResponse {
                         jsonrpc: "2.0".into(),
                         id: req.id.clone(),
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32603,
-                            message: e.to_string(),
-                            data: None,
-                        }),
+                        result: Some(json!({
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": format!("Error executing tool '{}': {}", tool_name, e)
+                                }
+                            ],
+                            "isError": true
+                        })),
+                        error: None,
                     },
                 }
             }

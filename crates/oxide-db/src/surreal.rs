@@ -819,6 +819,7 @@ impl ProjectStore for SurrealProjectStore {
                     code_body: sym.summary.unwrap_or_default(),
                     confidence,
                     macro_parent,
+                    symbol_kind: Some(sym.kind),
                 });
             }
         }
