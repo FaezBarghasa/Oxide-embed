@@ -338,6 +338,17 @@ impl McpServer {
                                 },
                                 "required": ["topic", "question", "answer"]
                             }
+                        },
+                        {
+                            "name": "oxide_update",
+                            "description": "Incrementally updates project context (changed/added/removed files) and agent intelligence (reusable crates & git distillation) without reconstructing full memory.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "scan_crates": { "type": "boolean", "description": "Scan and refresh workspace crate catalog in ~/RustroverProjects/ (default true)" },
+                                    "distill_git": { "type": "boolean", "description": "Distill recent git commits into agent decision/learning memories (default true)" }
+                                }
+                            }
                         }
                     ]
                 })),
@@ -570,8 +581,7 @@ impl McpServer {
                     Ok(out)
                 } else {
                     Err(OxideError::Config(
-                        "Oxide database not found. Run 'oxide-embed init' and 'oxide-embed index'."
-                            .into(),
+                        "Oxide database not found. Run 'oxide-embed index'.".into(),
                     ))
                 }
             }
@@ -1325,6 +1335,13 @@ impl McpServer {
                     "Created Mental Model '{}': {}",
                     model.topic, model.question
                 ))
+            }
+
+            "oxide_update" => {
+                let scan_crates = args.get("scan_crates").and_then(|v| v.as_bool()).unwrap_or(true);
+                let distill_git = args.get("distill_git").and_then(|v| v.as_bool()).unwrap_or(true);
+                crate::commands::handle_update(project_root, None, None, scan_crates, distill_git).await?;
+                Ok("Incremental update of project context and agent intelligence complete.".into())
             }
 
             _ => Err(OxideError::Config(format!("Unknown tool: {}", tool_name))),

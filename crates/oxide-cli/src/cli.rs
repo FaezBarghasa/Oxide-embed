@@ -21,20 +21,16 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    #[command(about = "Initialize .oxide memory container in project root")]
-    Init {
-        #[arg(short, long, help = "Project name override")]
-        name: Option<String>,
-    },
-
     #[command(about = "Run local health and configuration diagnostics")]
     Doctor,
 
     #[command(
-        about = "Index project files, generate AST outlines, extract docs, and build knowledge graph",
+        about = "Initialize (if needed) and index project files, generate AST outlines, extract docs, and build knowledge graph",
         visible_alias = "cognify"
     )]
     Index {
+        #[arg(short, long, help = "Project name override if initializing")]
+        name: Option<String>,
         #[arg(long, help = "Force re-index all files even if unchanged")]
         force: bool,
         #[arg(
@@ -44,6 +40,32 @@ pub enum Commands {
         device: Option<String>,
         #[arg(long, help = "Embedding batch size")]
         batch_size: Option<usize>,
+    },
+
+    #[command(
+        about = "Incrementally update project context and agent intelligence without reconstructing full memory",
+        visible_alias = "sync"
+    )]
+    Update {
+        #[arg(
+            long,
+            help = "Compute device preference (auto, cuda, metal, rocm, cpu)"
+        )]
+        device: Option<String>,
+        #[arg(long, help = "Embedding batch size")]
+        batch_size: Option<usize>,
+        #[arg(
+            long,
+            default_value_t = true,
+            help = "Scan and refresh workspace crate catalog in ~/RustroverProjects/ for anti-duplication"
+        )]
+        scan_crates: bool,
+        #[arg(
+            long,
+            default_value_t = true,
+            help = "Distill recent git commits into agent decision and learning memories"
+        )]
+        distill_git: bool,
     },
 
     #[command(about = "Show AST outline for a file without reading full content")]

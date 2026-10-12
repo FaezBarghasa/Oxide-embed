@@ -10,11 +10,12 @@ use std::time::Instant;
 
 pub async fn handle_index(
     project_root: &Path,
+    name_override: Option<String>,
     force: bool,
     device_override: Option<&str>,
     batch_size_override: Option<usize>,
 ) -> Result<()> {
-    let oxide_dir = crate::commands::init::ensure_initialized(project_root, None)?;
+    let oxide_dir = crate::commands::init::ensure_initialized(project_root, name_override)?;
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let config = OxideConfig::load_from_dir(&oxide_dir)?;

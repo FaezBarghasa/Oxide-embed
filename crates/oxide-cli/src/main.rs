@@ -11,10 +11,10 @@ use cli::{Cli, Commands};
 use commands::{
     handle_answer, handle_callees, handle_callers, handle_conflicts, handle_consolidate,
     handle_context, handle_distill, handle_doctor, handle_explain, handle_export, handle_handoff,
-    handle_impact, handle_import, handle_index, handle_init, handle_install_hook, handle_memify,
+    handle_impact, handle_import, handle_index, handle_install_hook, handle_memify,
     handle_model_create, handle_model_get, handle_model_list, handle_outline, handle_read,
     handle_recall, handle_reflect, handle_remember, handle_report, handle_run, handle_search,
-    handle_sync_notes, handle_tokenmap,
+    handle_sync_notes, handle_tokenmap, handle_update,
 };
 use mcp::McpServer;
 use std::env;
@@ -31,13 +31,28 @@ async fn main() -> ExitCode {
     let project_root = args.project_dir.as_deref().unwrap_or(&current_dir);
 
     let result = match args.command {
-        Commands::Init { name } => handle_init(project_root, name),
         Commands::Doctor => handle_doctor(project_root).await,
         Commands::Index {
+            name,
             force,
             device,
             batch_size,
-        } => handle_index(project_root, force, device.as_deref(), batch_size).await,
+        } => handle_index(project_root, name, force, device.as_deref(), batch_size).await,
+        Commands::Update {
+            device,
+            batch_size,
+            scan_crates,
+            distill_git,
+        } => {
+            handle_update(
+                project_root,
+                device.as_deref(),
+                batch_size,
+                scan_crates,
+                distill_git,
+            )
+            .await
+        }
         Commands::Outline { path } => handle_outline(project_root, &path).await,
         Commands::Context { task, budget } => handle_context(project_root, &task, budget).await,
         Commands::Search {
