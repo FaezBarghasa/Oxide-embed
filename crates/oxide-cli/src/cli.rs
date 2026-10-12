@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "oxide-embed")]
 #[command(author = "Faez Barghasa")]
-#[command(version = "0.3.0")]
+#[command(version)]
 #[command(about = "Local, portable, AST-aware memory and embedding engine for AI coding agents", long_about = None)]
 pub struct Cli {
     #[arg(
