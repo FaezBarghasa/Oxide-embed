@@ -1,8 +1,5 @@
 use oxide_core::error::Result;
-use oxide_core::memory::MemoryKind;
-use oxide_core::{
-    CrateCatalogEntry, MemifyEngine, MemoryDistiller, OxideConfig, OxideManifest,
-};
+use oxide_core::{CrateCatalogEntry, MemoryDistiller, OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::device::{device_name, optimal_batch_size};
 use oxide_ml::{CandleBertEmbedder, Embedder};
@@ -40,10 +37,7 @@ pub async fn handle_update(
         .unwrap_or_else(|| optimal_batch_size(dev))
         .max(1);
 
-    println!(
-        "Accelerator: {} | Batch size: {}",
-        dev_label, batch_size
-    );
+    println!("Accelerator: {} | Batch size: {}", dev_label, batch_size);
 
     // ---------------------------------------------------------
     // 1. TIER 1: Incremental Project Context Update
@@ -56,8 +50,7 @@ pub async fn handle_update(
     );
 
     let disk_files = walker.walk()?;
-    let mut disk_by_rel_path: HashMap<String, (&oxide_core::FileRecord, &String)> =
-        HashMap::new();
+    let mut disk_by_rel_path: HashMap<String, (&oxide_core::FileRecord, &String)> = HashMap::new();
     for (f, c) in &disk_files {
         disk_by_rel_path.insert(f.relative_path.clone(), (f, c));
     }
@@ -118,7 +111,9 @@ pub async fn handle_update(
                 } else {
                     // Modified file: clean old artifacts before replacing
                     files_updated += 1;
-                    store.delete_file_artifacts(file_id, &file_record.relative_path).await?;
+                    store
+                        .delete_file_artifacts(file_id, &file_record.relative_path)
+                        .await?;
                     let _ = store
                         .mark_mental_models_stale_for_files(std::slice::from_ref(
                             &file_record.relative_path,
@@ -202,8 +197,7 @@ pub async fn handle_update(
             || file_record.relative_path.ends_with(".rst");
 
         if is_markdown {
-            let mut sections =
-                DocLinker::extract_doc_sections(&file_record.relative_path, content);
+            let mut sections = DocLinker::extract_doc_sections(&file_record.relative_path, content);
             if !sections.is_empty() {
                 let texts: Vec<String> = sections.iter().map(|s| s.content.clone()).collect();
                 if let Ok(embeddings) = embedder.embed_batch(&texts).await {
@@ -213,8 +207,7 @@ pub async fn handle_update(
                         doc_sections_count += 1;
                     }
                 }
-                let doc_refs =
-                    DocLinker::link_sections_to_symbols(&sections, &all_project_symbols);
+                let doc_refs = DocLinker::link_sections_to_symbols(&sections, &all_project_symbols);
                 for r in doc_refs {
                     let _ = store.upsert_doc_reference(&r).await;
                 }
@@ -235,15 +228,17 @@ pub async fn handle_update(
     let mut crates_cataloged = 0;
     if scan_crates {
         println!("Scanning workspace for reusable crates (Anti-Duplication Catalog)...");
-        let candidate_roots = [
-            project_root.parent(),
-            std::env::var("HOME").ok().map(|h| PathBuf::from(h).join("RustroverProjects")).as_deref(),
-        ];
+        let home_projects = std::env::var("HOME")
+            .ok()
+            .map(|h| PathBuf::from(h).join("RustroverProjects"));
+        let candidate_roots = [project_root.parent(), home_projects.as_deref()];
 
         let mut scanned_crates = HashSet::new();
         for root_opt in candidate_roots.into_iter().flatten() {
             if root_opt.exists() {
-                crates_cataloged += scan_and_catalog_crates(root_opt, &store, &embedder, &mut scanned_crates).await?;
+                crates_cataloged +=
+                    scan_and_catalog_crates(root_opt, &store, &embedder, &mut scanned_crates)
+                        .await?;
             }
         }
     }
@@ -251,29 +246,42 @@ pub async fn handle_update(
     let mut git_memories_distilled = 0;
     if distill_git {
         println!("Distilling recent git commits into agent decision/learning memories...");
-        git_memories_distilled = distill_git_history(project_root, &manifest, &store, &embedder).await?;
+        git_memories_distilled =
+            distill_git_history(project_root, &manifest, &store, &embedder).await?;
     }
 
     // Temporal decay & rule consolidation
-    let all_mems = store.list_all_memories().await.unwrap_or_default();
-    let decay_stats = MemifyEngine::calculate_decay(&all_mems, chrono::Utc::now(), 14.0);
+    let decay_sql = r#"
+        UPDATE calls SET 
+            weight = weight * math::pow(0.5, (time::now() - valid_from) / 1209600.0)
+        WHERE valid_from IS NOT NONE;
+    "#;
+    let _ = store.db().query(decay_sql).await;
+    let _ = store.db().query("DELETE calls WHERE weight < 0.15;").await;
     let rules_count = store.list_active_rules().await.unwrap_or_default().len();
 
     let elapsed = start_time.elapsed();
-    println!("\nOxide-Embed Context & Intelligence Sync Complete in {:.2?}:", elapsed);
+    println!(
+        "\nOxide-Embed Context & Intelligence Sync Complete in {:.2?}:",
+        elapsed
+    );
     println!("  [Project Context Delta]");
-    println!("    Unchanged files:     {} (0 re-embeddings needed)", files_unchanged);
+    println!(
+        "    Unchanged files:     {} (0 re-embeddings needed)",
+        files_unchanged
+    );
     println!("    New files added:     {}", files_added);
     println!("    Updated files:       {}", files_updated);
     println!("    Removed files:       {}", files_removed);
     println!("    Chunks updated:      {}", total_chunks);
     println!("    Symbols re-indexed:  {}", total_symbols);
+    println!("    Call edges updated:  {}", total_call_edges);
+    println!("    Import edges updated:{}", total_import_edges);
     println!("    Doc sections linked: {}", doc_sections_count);
     println!("  [Agent Metacognitive Intelligence]");
     println!("    Crates cataloged:    {}", crates_cataloged);
     println!("    Git memories added:  {}", git_memories_distilled);
     println!("    Active rules:        {}", rules_count);
-    println!("    Avg memory weight:   {:.2}", decay_stats.mean_weight);
 
     Ok(())
 }
@@ -335,13 +343,13 @@ async fn scan_and_catalog_crates(
 
             // Check if no_std in lib.rs
             let lib_rs = p.join("src").join("lib.rs");
-            if lib_rs.exists() {
-                if let Ok(src) = std::fs::read_to_string(&lib_rs) {
-                    if src.contains("#![no_std]") {
-                        entry.target_arch = Some("no_std".into());
-                    } else {
-                        entry.target_arch = Some("std".into());
-                    }
+            if lib_rs.exists()
+                && let Ok(src) = std::fs::read_to_string(&lib_rs)
+            {
+                if src.contains("#![no_std]") {
+                    entry.target_arch = Some("no_std".into());
+                } else {
+                    entry.target_arch = Some("std".into());
                 }
             }
 
@@ -353,10 +361,10 @@ async fn scan_and_catalog_crates(
                 entry.target_arch.as_deref().unwrap_or("")
             );
 
-            if let Ok(embs) = embedder.embed_batch(&[text_to_embed]).await {
-                if let Some(emb) = embs.into_iter().next() {
-                    entry.embedding = Some(emb);
-                }
+            if let Ok(embs) = embedder.embed_batch(&[text_to_embed]).await
+                && let Some(emb) = embs.into_iter().next()
+            {
+                entry.embedding = Some(emb);
             }
 
             let _ = store.upsert_crate_catalog(&entry).await;

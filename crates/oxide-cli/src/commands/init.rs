@@ -3,7 +3,10 @@ use oxide_core::{OxideConfig, OxideManifest};
 use std::fs;
 use std::path::Path;
 
-pub fn ensure_initialized(project_root: &Path, name_override: Option<String>) -> Result<std::path::PathBuf> {
+pub fn ensure_initialized(
+    project_root: &Path,
+    name_override: Option<String>,
+) -> Result<std::path::PathBuf> {
     let oxide_dir = project_root.join(".oxide");
     let manifest_path = oxide_dir.join("manifest.json");
     let config_path = oxide_dir.join("config.toml");
@@ -50,8 +53,4 @@ pub fn ensure_initialized(project_root: &Path, name_override: Option<String>) ->
     println!("Schema version: {}", manifest.schema_version);
 
     Ok(oxide_dir)
-}
-
-pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result<()> {
-    ensure_initialized(project_root, name_override).map(|_| ())
 }

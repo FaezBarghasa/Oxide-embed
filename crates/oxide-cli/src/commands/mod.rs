@@ -40,7 +40,6 @@ pub use export_import::{handle_export, handle_import};
 pub use handoff::handle_handoff;
 pub use impact::handle_impact;
 pub use index::handle_index;
-pub use init::{ensure_initialized, handle_init};
 pub use install_hook::handle_install_hook;
 pub use memify::handle_memify;
 pub use mental_model::{handle_model_create, handle_model_get, handle_model_list};

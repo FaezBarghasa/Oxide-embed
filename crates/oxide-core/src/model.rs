@@ -123,7 +123,11 @@ pub struct CrateCatalogEntry {
 }
 
 impl CrateCatalogEntry {
-    pub fn new(crate_name: impl Into<String>, root_path: impl Into<String>, version: impl Into<String>) -> Self {
+    pub fn new(
+        crate_name: impl Into<String>,
+        root_path: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
         Self {
             crate_name: crate_name.into(),
             root_path: root_path.into(),

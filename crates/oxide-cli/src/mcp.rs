@@ -1338,9 +1338,22 @@ impl McpServer {
             }
 
             "oxide_update" => {
-                let scan_crates = args.get("scan_crates").and_then(|v| v.as_bool()).unwrap_or(true);
-                let distill_git = args.get("distill_git").and_then(|v| v.as_bool()).unwrap_or(true);
-                crate::commands::handle_update(project_root, None, None, scan_crates, distill_git).await?;
+                let scan_crates = args
+                    .get("scan_crates")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let distill_git = args
+                    .get("distill_git")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                crate::commands::handle_update(
+                    &self.workspace_dir,
+                    None,
+                    None,
+                    scan_crates,
+                    distill_git,
+                )
+                .await?;
                 Ok("Incremental update of project context and agent intelligence complete.".into())
             }
 

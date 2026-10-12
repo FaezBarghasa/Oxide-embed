@@ -1,4 +1,4 @@
-use oxide_core::error::{OxideError, Result};
+use oxide_core::error::Result;
 use oxide_core::{OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::device::{device_name, optimal_batch_size};
