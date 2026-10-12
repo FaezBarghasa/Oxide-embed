@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-10-13
+
+### Added
+- **Incremental Delta Synchronization (`oxide-embed update`)**:
+  - Content-hash delta detection tracking added, modified, unchanged, and deleted files.
+  - Automatic purging of obsolete artifacts and stale mental model invalidation.
+  - Sibling crate cataloging from `~/RustroverProjects/` for cross-project anti-duplication.
+  - Git commit history distillation into typed architectural memories.
+- **Dual-Tier Cognitive Memory Architecture**:
+  - Tier 1: Project-specific AST symbols, Code-ToC chunks, 2-hop call graph edges, and doc references.
+  - Tier 2: Agent metacognitive intelligence with standing mental models (`oxide-embed model`), procedural AIP skills, and consolidated rules.
+- **Cognitive Reflection Engine (`oxide-embed reflect`)**:
+  - Instant recall of standing mental models with fallback to 4-way Reciprocal Rank Fusion (dense vector, STAIR lexical, GraphRAG 2-hop topology, and Ebbinghaus decay).
+- **SurrealDB Transactional Batching & Indexing**:
+  - Added `upsert_chunks_batch` using 50-chunk multi-statement transactions, reducing fsync commits by 50x.
+  - B-tree indexing across `chunk`, `symbol`, and `calls` tables.
+  - Set-based multi-target GraphRAG BFS traversal using `WHERE in IN $targets`.
+- **Decoupled Non-Blocking MCP Server**:
+  - Asynchronous request execution on Tokio worker pool.
+  - Atomic response serialization to stdout via `tokio::sync::mpsc`.
+  - Expanded to 19 specialized MCP tools (including `oxide_update`, `oxide_model_create`, `oxide_model_list`, `oxide_model_get`, `oxide_reflect`).
+- **Profiling Infrastructure**:
+  - Added `[profile.release-with-debug]` profile in workspace `Cargo.toml` for zero-overhead flamegraph capture.
+
+### Changed
+- Removed redundant `oxide-embed init` CLI command; automatic initialization is now seamlessly embedded into `oxide-embed index`.
+- Test suite expanded to 50 passed unit and integration tests across all workspace crates.
+
+---
+
 ## [0.4.0] - 2026-09-22
 
 ### Added

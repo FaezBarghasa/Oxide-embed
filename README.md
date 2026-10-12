@@ -5,7 +5,7 @@
 [![MCP](https://img.shields.io/badge/protocol-MCP%20Stdio-purple.svg)](https://modelcontextprotocol.io/)
 [![Debian Package](https://img.shields.io/badge/package-.deb%20amd64%20%2F%20arm64-blue.svg)](docs/INSTALL.md)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Build & Tests](https://img.shields.io/badge/tests-36%20passed-brightgreen.svg)]()
+[![Build & Tests](https://img.shields.io/badge/tests-50%20passed-brightgreen.svg)]()
 
 **Oxide-Embed** is an offline-first, ultra-high-throughput AST-aware context engine, codebase GraphRAG memory system, and Model Context Protocol (MCP) server engineered in pure Rust (2024 Edition).
 
@@ -180,7 +180,7 @@ rpmbuild -ba packaging/fedora/oxide-embed.spec
 - **Local Token Ledger**: Measures input, output, cached, and reasoning tokens with estimated cost breakdowns and savings scoreboards.
 
 ### 6. Agent Integration & Live Automation
-- **Native Model Context Protocol (MCP)**: Exposes 15 specialized tools over stdio for direct integration into Antigravity, Claude Code, Cursor, and Roo Code.
+- **Native Model Context Protocol (MCP)**: Exposes 19 specialized tools over stdio with non-blocking concurrency for direct integration into Antigravity, Claude Code, Cursor, and Roo Code.
 - **Live Debounced Watcher Daemon**: Real-time file system monitor (`oxide-embed watch` / `oxide-watch.service`) that incrementally re-indexes AST symbols and call edges on file save.
 
 ---
@@ -205,16 +205,16 @@ oxide-embed recall "architecture" --as-of 2026-08-01T00:00:00Z --budget 1000
 oxide-embed conflicts
 ```
 
-### 2. Workspace Indexing & Cognitive Graph (GPU Accelerated)
+### 2. Workspace Indexing, Delta Updates & Cognitive Graph (GPU Accelerated)
 ```bash
-# Initialize .oxide metadata and embedded SurrealKV store
-oxide-embed init
+# Run GPU-accelerated AST extraction, call graph linking, and Vector indexer (auto-initializes .oxide if missing)
+oxide-embed index --device auto
 
-# Run GPU-accelerated AST extraction, call graph linking, and Vector indexer (auto-detects CUDA/Metal)
-oxide-embed index --device cuda --batch-size 32
+# Incrementally synchronize deltas (modified files, deleted artifacts, reusable crate discovery, git commit distillation)
+oxide-embed update
 
-# Cognify workspace (Full Cognee-style GraphRAG index with CUDA acceleration)
-oxide-embed cognify --device cuda
+# Cognify workspace (Full Cognee-style GraphRAG index with GPU acceleration)
+oxide-embed cognify --device auto
 
 # Run live watcher daemon for incremental sub-millisecond re-indexing
 oxide-embed watch
@@ -265,7 +265,25 @@ oxide-embed run -- cargo test
 oxide-embed read src/main.rs
 ```
 
-### 7. Session Handover & Memory Evolution
+### 7. Dual-Tier Cognitive Memory & Standing Mental Models
+```bash
+# Reflect on a task or question using standing mental models or 4-way RRF recall
+oxide-embed reflect "what is the safe error handling policy?"
+
+# Create or update a standing mental model for instant, low-latency recall
+oxide-embed model create auth "How is PASETO token validation handled?" --answer "PASETO v4 tokens are verified in auth middleware."
+
+# List all standing mental models and their freshness status
+oxide-embed model list
+
+# Recall a specific mental model by topic
+oxide-embed model recall auth
+
+# Check which mental models became stale due to code changes
+oxide-embed model stale
+```
+
+### 8. Session Handover & Memory Evolution
 ```bash
 # Save atomic handover checkpoint
 oxide-embed handoff --goal "STM32 I2C Driver" --next "Run HIL tests"
@@ -280,15 +298,15 @@ oxide-embed memify
 oxide-embed consolidate
 ```
 
-### 8. Interactive Terminal Dashboard (TUI)
+### 9. Interactive Terminal Dashboard (TUI)
 ```bash
 # Launch interactive Code-ToC, symbol preview, and memory browser
 oxide-embed tui
 ```
 
-### 9. Model Context Protocol (MCP) Server
+### 10. Model Context Protocol (MCP) Server
 ```bash
-# Start stdio MCP server for agent IDEs
+# Start stdio MCP server for agent IDEs (non-blocking async request processing)
 oxide-embed mcp
 
 # Automatically install hooks into AI agent configs
@@ -311,7 +329,7 @@ oxide-embed install-hook
 ## 🧪 Testing & Verification
 
 ```bash
-# Run all workspace unit and integration tests (36 passed)
+# Run all workspace unit and integration tests (50 passed)
 cargo test --workspace
 
 # Run all Criterion benchmarks

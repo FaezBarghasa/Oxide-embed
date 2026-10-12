@@ -69,25 +69,29 @@ Or configure manually in `claude_desktop_config.json`:
 
 ## 3. Available MCP Tools
 
-Oxide-embed exposes **15 specialized tools** for AI coding assistants:
+Oxide-embed exposes **19 specialized tools** for AI coding assistants:
 
 | Tool Name | Description | Key Arguments |
 | :--- | :--- | :--- |
-| `oxide_stair_search` | STAIR hierarchical Code-ToC leaf retrieval with breadcrumb routing | `query` (string), `limit` (int) |
-| `oxide_remember` | Store typed semantic memory (decision, preference, instruction) with conflict checks | `content` (string), `kind` (string), `tags` (array), `symbol_ref` (string), `auto_resolve` (bool) |
+| `oxide_context` | Synthesize token-budgeted cognitive context for a task (rules + active handoff + 2-hop GraphRAG) | `task` (string), `budget` (int) |
+| `oxide_read_symbol` | Surgically read only the exact AST symbol definition and docstring from a file | `file_path` (string), `symbol` (string) |
+| `oxide_search` | Search code symbols and knowledge graph with optional budget limit | `query` (string), `budget` (int), `with_graph` (bool) |
+| `oxide_explain` | Explain a symbol's multi-hop call graph and documentation topology | `symbol` (string), `hops` (int) |
+| `oxide_condense` | Condense raw terminal compiler output and cache full log to disk | `command` (string), `raw_output` (string), `exit_code` (int) |
+| `oxide_remember` | Store typed semantic memory (decision, preference, instruction) with conflict checks | `content` (string), `kind` (string), `title` (string), `tags` (array), `symbol_ref` (string), `auto_resolve` (bool) |
 | `oxide_recall` | Recall typed semantic memories with category, tags, and temporal filters | `query` (string), `kind` (string), `tags` (array), `as_of` (string), `budget` (int), `limit` (int) |
 | `oxide_get_rules` | Returns active consolidated architectural constraints, decisions, and instructions | None |
-| `oxide_index_workspace` | Incremental AST and vector indexing of codebase | `path` (string), `force` (bool) |
-| `oxide_search_hybrid` | Combined BM25 lexical & vector semantic search | `query` (string), `limit` (int) |
-| `oxide_query_graph` | Multi-hop GraphRAG symbol traversal (callers, callees) | `symbol` (string), `depth` (int) |
-| `oxide_extract_ast` | Tree-sitter symbol outline and AST anatomy | `file_path` (string) |
-| `oxide_get_outline` | High-level symbol hierarchy (classes, functions, traits) | `file_path` (string) |
-| `oxide_link_docs` | Bi-directional docstring and symbol relationship map | `file_path` (string) |
-| `oxide_read_guard` | Context deduplication filter to eliminate repetitive reads | `session_id` (string), `file_path` (string) |
-| `oxide_condense_errors` | Compresses raw compiler/terminal output for token economy | `raw_output` (string) |
-| `oxide_token_ledger` | Session token balance, burn rate, and Ebbinghaus decay | `session_id` (string) |
-| `oxide_check_drift` | Validates database index consistency against filesystem | `path` (string) |
-| `oxide_mcp_status` | Returns live health, memory stats, and index metrics | None |
+| `oxide_answer` | Generate direct grounded answers synthesizing recalled memories, rules, and live AST code graph | `question` (string), `kind` (string), `budget` (int) |
+| `oxide_distill` | Distills decisions, learnings, and resolved errors from recent git commit history into project memory | `commits` (string), `save` (bool) |
+| `oxide_sync_memories` | Synchronizes memories bidirectionally with Obsidian / Markdown notes in `.oxide/memories/` | `direction` ("export" / "import" / "bidirectional") |
+| `oxide_stair_search` | STAIR hierarchical Code-ToC leaf retrieval with breadcrumb routing | `query` (string), `limit` (int) |
+| `oxide_distill_skill` | Distill an engineered procedural skill (Agent Instruction Protocol / AIP) into `.oxide/skills/` | `name` (string), `description` (string), `workflow_steps` (array) |
+| `oxide_recall_skill` | Recall procedural skills matching an intent or trigger | `query` (string) |
+| `oxide_reflect` | Tiered cognitive reflection: standing mental models or 4-way RRF recall | `query` (string), `budget` (int), `force_fresh` (bool) |
+| `oxide_model_list` | List all active standing mental models and their freshness states | None |
+| `oxide_model_get` | Get a specific standing mental model by its topic slug | `topic` (string) |
+| `oxide_model_create` | Create or update a standing mental model with question, answer, and referenced symbols | `topic` (string), `question` (string), `answer` (string) |
+| `oxide_update` | Incrementally updates project context (changed/added/removed files) and agent intelligence (reusable crates & git distillation) | `scan_crates` (bool), `distill_git` (bool) |
 
 ---
 

@@ -32,6 +32,10 @@ Oxide-embed/
 ```
 
 ### A. `oxide-core`
+- **Dual-Tier Cognitive Memory**:
+  - **Tier 1 (Project Context)**: AST symbols, structural chunks, call graph edges, doc sections, and git memories specific to the active repository.
+  - **Tier 2 (Agent Metacognitive Intelligence)**: Reusable procedural skills (AIP), standing mental models, consolidated Cerebrum rules, and workspace crate catalog for cross-project reuse and anti-duplication.
+- **Standing Mental Models & Reflection (`ReflectEngine`)**: Instant recall of pre-synthesized architectural answers; falls back to 4-way Reciprocal Rank Fusion (vector similarity, STAIR lexical, GraphRAG 2-hop topology, Ebbinghaus decay).
 - **STAIR Hit Data Model (`StairHit`)**: Hierarchical breadcrumb and structural leaf node container.
 - **Memanto Primitives**:
   - `MemoryDistiller`: Distills conventional commits and agent session logs into structured architectural memories.
@@ -60,12 +64,14 @@ Oxide-embed/
 ### D. `oxide-db`
 - **STAIR Hierarchical Search (`stair_search`)**: Sub-millisecond 2-stage AST leaf-node routing in SurrealDB.
 - **Embedded SurrealDB Engine**: Native in-process database with zero client-server network hops.
-- **GraphRAG Subgraph Traversal**: Multi-hop edge traversals (`CALLS`, `DEFINED_IN`, `IMPORTS`, `DOCUMENTS`) executing in **530 µs**.
+- **Transactional Batch Ingestion**: Multi-statement transactional chunks (50 per transaction) via `upsert_chunks_batch`, reducing fsync roundtrips by 50x.
+- **B-Tree Indexing**: Comprehensive B-tree indices on `chunk`, `symbol`, and `calls` relations for sub-millisecond filtering.
+- **Batch GraphRAG Subgraph Traversal**: Multi-hop edge traversals (`CALLS`, `DEFINED_IN`, `IMPORTS`, `DOCUMENTS`) executing in **530 µs** via set-based `IN $targets` batch queries.
 - **Hybrid Search**: Combines BM25 lexical keyword matching with KNN vector search in **149 µs**.
 
 ### E. `oxide-cli`
-- **CLI Subcommands**: `init`, `index`, `cognify`, `callers`, `callees`, `impact`, `tokenmap`, `context`, `search` (with `--stair`), `explain`, `run`, `read`, `handoff`, `report`, `memify`, `consolidate`, `install-hook`, `watch`, `mcp`.
-- **MCP Server**: Implements 15 Model Context Protocol tools for AI coding assistants (Antigravity, Claude Code, Cursor, Roo Code).
+- **CLI Subcommands**: `index` (auto-initializes metadata), `update` (incremental delta sync & intelligence discovery), `model` (standing mental models), `reflect`, `cognify`, `callers`, `callees`, `impact`, `tokenmap`, `context`, `search` (with `--stair`), `explain`, `run`, `read`, `handoff`, `report`, `memify`, `consolidate`, `install-hook`, `watch`, `mcp`.
+- **MCP Server**: Implements 19 Model Context Protocol tools for AI coding assistants (Antigravity, Claude Code, Cursor, Roo Code) with non-blocking async request processing.
 - **File Watcher**: `notify`-based incremental re-indexing daemon with systemd user service integration.
 
 ---

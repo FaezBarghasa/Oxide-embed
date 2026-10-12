@@ -35,15 +35,15 @@ Dedicated, self-contained shell and PowerShell scripts automate compiling, strip
 ./build-ubuntu-app.sh
 ```
 **Artifacts Generated in `dist/`:**
-- **Debian Package**: `dist/oxide-embed_0.4.0_amd64.deb`
-- **Portable Tarball**: `dist/oxide-embed-v0.4.0-x86_64-unknown-linux-gnu.tar.gz`
+- **Debian Package**: `dist/oxide-embed_0.6.0_amd64.deb`
+- **Portable Tarball**: `dist/oxide-embed-v0.6.0-x86_64-unknown-linux-gnu.tar.gz`
 - **Standalone Stripped Binary**: `dist/bin/oxide-embed`
 - **Desktop Entry**: `dist/oxide-embed.desktop`
 - **Checksums**: `dist/SHA256SUMS`
 
 **Install Debian Package:**
 ```bash
-sudo dpkg -i dist/oxide-embed_0.4.0_amd64.deb
+sudo dpkg -i dist/oxide-embed_0.6.0_amd64.deb
 ```
 
 ---
@@ -54,7 +54,7 @@ sudo dpkg -i dist/oxide-embed_0.4.0_amd64.deb
 ```
 **Artifacts Generated in `dist/macos/`:**
 - **Universal Binary (`lipo`)**: `dist/macos/bin/oxide-embed` (Apple Silicon + Intel)
-- **Universal Release Tarball**: `dist/macos/oxide-embed-v0.4.0-universal-apple-darwin.tar.gz`
+- **Universal Release Tarball**: `dist/macos/oxide-embed-v0.6.0-universal-apple-darwin.tar.gz`
 - **LaunchAgent Service Plist**: `dist/macos/launchd/com.faezbarghasa.oxide-embed.plist`
 - **Homebrew Formula**: `dist/macos/homebrew/oxide-embed.rb`
 - **Checksums**: `dist/macos/SHA256SUMS`
@@ -82,9 +82,9 @@ launchctl load ~/Library/LaunchAgents/com.faezbarghasa.oxide-embed.plist
 
 **Artifacts Generated in `dist/windows/`:**
 - **Executable**: `dist/windows/bin/oxide-embed.exe`
-- **Release Zip Archive**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc.zip`
-- **PowerShell Installer**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc/install.ps1`
-- **MCP Launcher**: `dist/windows/oxide-embed-v0.4.0-x86_64-pc-windows-msvc/run-mcp.bat`
+- **Release Zip Archive**: `dist/windows/oxide-embed-v0.6.0-x86_64-pc-windows-msvc.zip`
+- **PowerShell Installer**: `dist/windows/oxide-embed-v0.6.0-x86_64-pc-windows-msvc/install.ps1`
+- **MCP Launcher**: `dist/windows/oxide-embed-v0.6.0-x86_64-pc-windows-msvc/run-mcp.bat`
 - **Checksums**: `dist/windows/SHA256SUMS`
 
 ---
