@@ -126,23 +126,25 @@ impl GraphTraversalService {
                 if current_callee_targets.is_empty() {
                     break;
                 }
+                let call_sql = r#"
+                    SELECT callee_name FROM calls 
+                    WHERE caller_name IN $targets OR caller_id IN $targets;
+                "#;
                 let mut next_targets = Vec::new();
-                for target in current_callee_targets {
-                    let call_sql = r#"
-                        SELECT callee_name FROM calls WHERE caller_name = $target OR in = type::record('symbol', $target) OR caller_id = $target;
-                    "#;
-                    if let Ok(mut callee_res) =
-                        store.db().query(call_sql).bind(("target", target)).await
-                    {
-                        let raw_callees: Vec<serde_json::Value> =
-                            callee_res.take(0).unwrap_or_default();
-                        for v in raw_callees {
-                            if let Ok(row) = serde_json::from_value::<CalleeRow>(v)
-                                && !row.callee_name.is_empty()
-                                && visited_callees.insert(row.callee_name.clone())
-                            {
-                                next_targets.push(row.callee_name);
-                            }
+                if let Ok(mut callee_res) = store
+                    .db()
+                    .query(call_sql)
+                    .bind(("targets", current_callee_targets))
+                    .await
+                {
+                    let raw_callees: Vec<serde_json::Value> =
+                        callee_res.take(0).unwrap_or_default();
+                    for v in raw_callees {
+                        if let Ok(row) = serde_json::from_value::<CalleeRow>(v)
+                            && !row.callee_name.is_empty()
+                            && visited_callees.insert(row.callee_name.clone())
+                        {
+                            next_targets.push(row.callee_name);
                         }
                     }
                 }
@@ -153,29 +155,31 @@ impl GraphTraversalService {
                 if current_caller_targets.is_empty() {
                     break;
                 }
+                let caller_sql = r#"
+                    SELECT caller_name, caller_id FROM calls 
+                    WHERE callee_name IN $targets;
+                "#;
                 let mut next_targets = Vec::new();
-                for target in current_caller_targets {
-                    let caller_sql = r#"
-                        SELECT caller_name, caller_id FROM calls WHERE callee_name = $target OR out = type::record('symbol', $target);
-                    "#;
-                    if let Ok(mut caller_res) =
-                        store.db().query(caller_sql).bind(("target", target)).await
-                    {
-                        let raw_callers: Vec<serde_json::Value> =
-                            caller_res.take(0).unwrap_or_default();
-                        for v in raw_callers {
-                            if let Ok(row) = serde_json::from_value::<CallerRow>(v) {
-                                if !row.caller_name.is_empty()
-                                    && visited_callers.insert(row.caller_name.clone())
-                                {
-                                    next_targets.push(row.caller_name);
-                                }
-                                if let Some(cid) = row.caller_id
-                                    && !cid.is_empty()
-                                    && visited_callers.insert(cid.clone())
-                                {
-                                    next_targets.push(cid);
-                                }
+                if let Ok(mut caller_res) = store
+                    .db()
+                    .query(caller_sql)
+                    .bind(("targets", current_caller_targets))
+                    .await
+                {
+                    let raw_callers: Vec<serde_json::Value> =
+                        caller_res.take(0).unwrap_or_default();
+                    for v in raw_callers {
+                        if let Ok(row) = serde_json::from_value::<CallerRow>(v) {
+                            if !row.caller_name.is_empty()
+                                && visited_callers.insert(row.caller_name.clone())
+                            {
+                                next_targets.push(row.caller_name);
+                            }
+                            if let Some(cid) = row.caller_id
+                                && !cid.is_empty()
+                                && visited_callers.insert(cid.clone())
+                            {
+                                next_targets.push(cid);
                             }
                         }
                     }

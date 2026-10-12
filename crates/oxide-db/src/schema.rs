@@ -30,6 +30,9 @@ DEFINE FIELD breadcrumbs ON symbol TYPE array<string> DEFAULT [];
 DEFINE FIELD summary ON symbol TYPE option<string>;
 DEFINE INDEX symbol_fingerprint_idx ON symbol FIELDS fingerprint;
 DEFINE INDEX idx_symbol_macro ON symbol FIELDS is_macro_node;
+DEFINE INDEX idx_symbol_file_id ON symbol FIELDS file_id;
+DEFINE INDEX idx_symbol_name ON symbol FIELDS name;
+DEFINE INDEX idx_symbol_qualified_name ON symbol FIELDS qualified_name;
 
 DEFINE TABLE chunk SCHEMAFULL;
 DEFINE FIELD file_id ON chunk TYPE string;
@@ -45,6 +48,8 @@ DEFINE FIELD embedding_model ON chunk TYPE option<string>;
 DEFINE FIELD embedding_dim ON chunk TYPE option<int>;
 DEFINE FIELD vector_set_id ON chunk TYPE option<string>;
 DEFINE FIELD updated_at ON chunk TYPE datetime;
+DEFINE INDEX idx_chunk_file_id ON chunk FIELDS file_id;
+DEFINE INDEX idx_chunk_symbol_id ON chunk FIELDS symbol_id;
 DEFINE INDEX chunk_vector_idx ON chunk FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
 
 DEFINE TABLE oxide_migration SCHEMAFULL;
@@ -69,6 +74,9 @@ DEFINE FIELD last_traversed_at ON calls TYPE option<datetime>;
 DEFINE FIELD valid_from ON calls TYPE datetime DEFAULT time::now();
 DEFINE FIELD valid_to ON calls TYPE option<datetime>;
 DEFINE INDEX idx_calls_active ON calls FIELDS valid_to;
+DEFINE INDEX idx_calls_caller_id ON calls FIELDS caller_id;
+DEFINE INDEX idx_calls_caller_name ON calls FIELDS caller_name;
+DEFINE INDEX idx_calls_callee_name ON calls FIELDS callee_name;
 
 DEFINE TABLE contains SCHEMAFULL;
 DEFINE FIELD in ON contains TYPE record<file>;
