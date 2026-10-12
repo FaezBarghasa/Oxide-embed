@@ -295,19 +295,23 @@ async fn scan_and_catalog_crates(
     already_scanned: &mut HashSet<String>,
 ) -> Result<usize> {
     let mut count = 0;
-    let Ok(entries) = std::fs::read_dir(search_root) else {
+    let Ok(mut entries) = tokio::fs::read_dir(search_root).await else {
         return Ok(0);
     };
 
-    for entry in entries.flatten() {
+    while let Ok(Some(entry)) = entries.next_entry().await {
         let p = entry.path();
-        if !p.is_dir() {
+        let is_dir = match entry.file_type().await {
+            Ok(ft) => ft.is_dir(),
+            Err(_) => false,
+        };
+        if !is_dir {
             continue;
         }
 
         let cargo_toml = p.join("Cargo.toml");
         if cargo_toml.exists() {
-            let Ok(content) = std::fs::read_to_string(&cargo_toml) else {
+            let Ok(content) = tokio::fs::read_to_string(&cargo_toml).await else {
                 continue;
             };
 
@@ -346,7 +350,7 @@ async fn scan_and_catalog_crates(
             // Check if no_std in lib.rs
             let lib_rs = p.join("src").join("lib.rs");
             if lib_rs.exists()
-                && let Ok(src) = std::fs::read_to_string(&lib_rs)
+                && let Ok(src) = tokio::fs::read_to_string(&lib_rs).await
             {
                 if src.contains("#![no_std]") {
                     entry.target_arch = Some("no_std".into());

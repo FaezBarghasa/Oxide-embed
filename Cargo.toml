@@ -96,3 +96,8 @@ codegen-units = 1
 panic = "abort"
 strip = "symbols"
 incremental = false
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false

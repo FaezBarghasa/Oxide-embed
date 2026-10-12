@@ -43,6 +43,7 @@ struct JsonRpcError {
     data: Option<Value>,
 }
 
+#[derive(Clone)]
 pub struct McpServer {
     workspace_dir: PathBuf,
 }
@@ -58,7 +59,6 @@ impl McpServer {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
         let stdin = tokio::io::stdin();
-        let mut stdout = tokio::io::stdout();
         let mut reader = BufReader::new(stdin).lines();
 
         let store = if let Ok(db_path) = oxide_core::resolve_db_path(&self.workspace_dir) {
@@ -67,6 +67,19 @@ impl McpServer {
             None
         };
 
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<JsonRpcResponse>(64);
+        let writer_handle = tokio::spawn(async move {
+            let mut stdout = tokio::io::stdout();
+            while let Some(resp) = rx.recv().await {
+                if let Ok(json_str) = serde_json::to_string(&resp) {
+                    let _ = stdout.write_all(json_str.as_bytes()).await;
+                    let _ = stdout.write_all(b"\n").await;
+                    let _ = stdout.flush().await;
+                }
+            }
+        });
+
+        let server = self.clone();
         while let Some(line) = reader.next_line().await? {
             let trimmed = line.trim();
             if trimmed.is_empty() {
@@ -79,15 +92,18 @@ impl McpServer {
                     continue;
                 }
 
-                let resp = self.handle_request(&req, store.as_ref()).await;
-                if let Ok(json_str) = serde_json::to_string(&resp) {
-                    let _ = stdout.write_all(json_str.as_bytes()).await;
-                    let _ = stdout.write_all(b"\n").await;
-                    let _ = stdout.flush().await;
-                }
+                let s = server.clone();
+                let st = store.clone();
+                let tx_clone = tx.clone();
+                tokio::spawn(async move {
+                    let resp = s.handle_request(&req, st.as_ref()).await;
+                    let _ = tx_clone.send(resp).await;
+                });
             }
         }
 
+        drop(tx);
+        let _ = writer_handle.await;
         Ok(())
     }
 
