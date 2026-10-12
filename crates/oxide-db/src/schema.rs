@@ -227,4 +227,18 @@ DEFINE TABLE model_references SCHEMAFULL;
 DEFINE FIELD in ON model_references TYPE record<mental_model>;
 DEFINE FIELD out ON model_references TYPE record<symbol>;
 DEFINE FIELD created_at ON model_references TYPE datetime DEFAULT time::now();
+
+-- Workspace Reusable Crate Catalog (Anti-Duplication)
+DEFINE TABLE crate_catalog SCHEMAFULL;
+DEFINE FIELD crate_name ON crate_catalog TYPE string;
+DEFINE FIELD root_path ON crate_catalog TYPE string;
+DEFINE FIELD version ON crate_catalog TYPE string;
+DEFINE FIELD description ON crate_catalog TYPE option<string>;
+DEFINE FIELD exported_types ON crate_catalog TYPE array<string> DEFAULT [];
+DEFINE FIELD exported_traits ON crate_catalog TYPE array<string> DEFAULT [];
+DEFINE FIELD target_arch ON crate_catalog TYPE option<string>;
+DEFINE FIELD updated_at ON crate_catalog TYPE datetime DEFAULT time::now();
+DEFINE FIELD embedding ON crate_catalog TYPE option<array<float>>;
+DEFINE INDEX idx_crate_name ON crate_catalog FIELDS crate_name UNIQUE;
+DEFINE INDEX crate_vector_idx ON crate_catalog FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
 "#;

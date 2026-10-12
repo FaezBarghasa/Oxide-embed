@@ -1157,4 +1157,148 @@ impl ProjectStore for SurrealProjectStore {
         }
         Ok(())
     }
+
+    async fn delete_file_artifacts(&self, file_id: &str, relative_path: &str) -> Result<()> {
+        let sql = r#"
+            DELETE FROM chunk WHERE file_id = $file_id;
+            DELETE FROM symbol WHERE file_id = $file_id;
+            DELETE FROM calls WHERE caller_id = $file_id;
+            DELETE FROM doc_section WHERE file_path = $rel_path;
+            DELETE FROM file WHERE id = type::record('file', $file_id);
+        "#;
+        let _ = self
+            .db
+            .query(sql)
+            .bind(("file_id", file_id.to_string()))
+            .bind(("rel_path", relative_path.to_string()))
+            .await;
+        Ok(())
+    }
+
+    async fn upsert_crate_catalog(&self, entry: &oxide_core::CrateCatalogEntry) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('crate_catalog', $name) SET
+                crate_name = $name,
+                root_path = $path,
+                version = $version,
+                description = $desc,
+                exported_types = $types,
+                exported_traits = $traits,
+                target_arch = $target_arch,
+                updated_at = time::now(),
+                embedding = $embedding;
+        "#;
+        let res = self
+            .db
+            .query(sql)
+            .bind(("name", entry.crate_name.clone()))
+            .bind(("path", entry.root_path.clone()))
+            .bind(("version", entry.version.clone()))
+            .bind(("desc", entry.description.clone()))
+            .bind(("types", entry.exported_types.clone()))
+            .bind(("traits", entry.exported_traits.clone()))
+            .bind(("target_arch", entry.target_arch.clone()))
+            .bind(("embedding", entry.embedding.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn list_crate_catalog(&self) -> Result<Vec<oxide_core::CrateCatalogEntry>> {
+        let sql = "SELECT * FROM crate_catalog ORDER BY crate_name ASC;";
+        let mut res = self
+            .db
+            .query(sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let raw: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
+        let mut entries = Vec::new();
+        for val in raw {
+            if let Ok(entry) = serde_json::from_value::<oxide_core::CrateCatalogEntry>(val) {
+                entries.push(entry);
+            }
+        }
+        Ok(entries)
+    }
+
+    async fn search_crate_catalog(
+        &self,
+        query_emb: &[f32],
+        limit: usize,
+    ) -> Result<Vec<oxide_core::CrateCatalogEntry>> {
+        let sql = r#"
+            SELECT *, vector::similarity::cosine(embedding, $emb) AS score
+            FROM crate_catalog
+            WHERE embedding IS NOT NONE
+            ORDER BY score DESC
+            LIMIT $limit;
+        "#;
+        let mut res = self
+            .db
+            .query(sql)
+            .bind(("emb", query_emb.to_vec()))
+            .bind(("limit", limit as i64))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let raw: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
+        let mut entries = Vec::new();
+        for val in raw {
+            if let Ok(entry) = serde_json::from_value::<oxide_core::CrateCatalogEntry>(val) {
+                entries.push(entry);
+            }
+        }
+        Ok(entries)
+    }
+
+    async fn upsert_procedural_skill(&self, skill: &oxide_core::ProceduralSkill) -> Result<()> {
+        let sql = r#"
+            UPSERT type::record('procedural_skill', $name) SET
+                name = $name,
+                description = $desc,
+                triggers = $triggers,
+                workflow_steps = $steps,
+                required_tools = $tools,
+                provenance_project = $provenance,
+                status = $status,
+                success_count = $success_count,
+                last_executed_at = time::now(),
+                embedding = $embedding;
+        "#;
+        let res = self
+            .db
+            .query(sql)
+            .bind(("name", skill.name.clone()))
+            .bind(("desc", skill.description.clone()))
+            .bind(("triggers", skill.triggers.clone()))
+            .bind(("steps", skill.workflow_steps.clone()))
+            .bind(("tools", skill.required_tools.clone()))
+            .bind(("provenance", skill.provenance_project.clone()))
+            .bind(("status", skill.status.clone()))
+            .bind(("success_count", skill.success_count as i64))
+            .bind(("embedding", skill.embedding.clone()))
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        res.check()
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn list_procedural_skills(&self) -> Result<Vec<oxide_core::ProceduralSkill>> {
+        let sql = "SELECT * FROM procedural_skill ORDER BY name ASC;";
+        let mut res = self
+            .db
+            .query(sql)
+            .await
+            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let raw: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
+        let mut skills = Vec::new();
+        for val in raw {
+            if let Ok(s) = serde_json::from_value::<oxide_core::ProceduralSkill>(val) {
+                skills.push(s);
+            }
+        }
+        Ok(skills)
+    }
 }

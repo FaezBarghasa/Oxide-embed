@@ -88,6 +88,22 @@ pub trait ProjectStore: Send + Sync {
     ) -> Result<Vec<oxide_core::MentalModel>>;
     async fn mark_mental_models_stale_for_files(&self, file_paths: &[String]) -> Result<usize>;
 
+    // Incremental File Maintenance
+    async fn delete_file_artifacts(&self, file_id: &str, relative_path: &str) -> Result<()>;
+
+    // Crate Catalog (Anti-Duplication)
+    async fn upsert_crate_catalog(&self, entry: &oxide_core::CrateCatalogEntry) -> Result<()>;
+    async fn list_crate_catalog(&self) -> Result<Vec<oxide_core::CrateCatalogEntry>>;
+    async fn search_crate_catalog(
+        &self,
+        query_emb: &[f32],
+        limit: usize,
+    ) -> Result<Vec<oxide_core::CrateCatalogEntry>>;
+
+    // Procedural Skills (Layer 4)
+    async fn upsert_procedural_skill(&self, skill: &oxide_core::ProceduralSkill) -> Result<()>;
+    async fn list_procedural_skills(&self) -> Result<Vec<oxide_core::ProceduralSkill>>;
+
     async fn export_surql(&self) -> Result<String>;
     async fn import_surql(&self, content: &str) -> Result<()>;
 }

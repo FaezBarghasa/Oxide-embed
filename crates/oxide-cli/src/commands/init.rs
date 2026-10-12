@@ -3,7 +3,15 @@ use oxide_core::{OxideConfig, OxideManifest};
 use std::fs;
 use std::path::Path;
 
-pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result<()> {
+pub fn ensure_initialized(project_root: &Path, name_override: Option<String>) -> Result<std::path::PathBuf> {
+    let oxide_dir = project_root.join(".oxide");
+    let manifest_path = oxide_dir.join("manifest.json");
+    let config_path = oxide_dir.join("config.toml");
+
+    if oxide_dir.exists() && manifest_path.exists() && config_path.exists() {
+        return Ok(oxide_dir);
+    }
+
     let project_name = name_override.unwrap_or_else(|| {
         project_root
             .file_name()
@@ -12,7 +20,6 @@ pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result
             .to_string()
     });
 
-    let oxide_dir = project_root.join(".oxide");
     fs::create_dir_all(&oxide_dir)?;
 
     // Create subdirectories
@@ -41,5 +48,10 @@ pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result
     println!("Project: {}", project_name);
     println!("Project ID: {}", manifest.project_id);
     println!("Schema version: {}", manifest.schema_version);
-    Ok(())
+
+    Ok(oxide_dir)
+}
+
+pub fn handle_init(project_root: &Path, name_override: Option<String>) -> Result<()> {
+    ensure_initialized(project_root, name_override).map(|_| ())
 }

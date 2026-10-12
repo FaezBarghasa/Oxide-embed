@@ -170,10 +170,11 @@ impl GraphTraversalService {
                                 {
                                     next_targets.push(row.caller_name);
                                 }
-                                if let Some(cid) = row.caller_id {
-                                    if !cid.is_empty() && visited_callers.insert(cid.clone()) {
-                                        next_targets.push(cid);
-                                    }
+                                if let Some(cid) = row.caller_id
+                                    && !cid.is_empty()
+                                    && visited_callers.insert(cid.clone())
+                                {
+                                    next_targets.push(cid);
                                 }
                             }
                         }

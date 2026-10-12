@@ -102,3 +102,38 @@ impl MentalModel {
         md
     }
 }
+
+/// A catalog entry for an existing workspace crate (for anti-duplication and reuse).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrateCatalogEntry {
+    pub crate_name: String,
+    pub root_path: String,
+    pub version: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub exported_types: Vec<String>,
+    #[serde(default)]
+    pub exported_traits: Vec<String>,
+    #[serde(default)]
+    pub target_arch: Option<String>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    pub embedding: Option<Vec<f32>>,
+}
+
+impl CrateCatalogEntry {
+    pub fn new(crate_name: impl Into<String>, root_path: impl Into<String>, version: impl Into<String>) -> Self {
+        Self {
+            crate_name: crate_name.into(),
+            root_path: root_path.into(),
+            version: version.into(),
+            description: None,
+            exported_types: Vec::new(),
+            exported_traits: Vec::new(),
+            target_arch: None,
+            updated_at: Utc::now(),
+            embedding: None,
+        }
+    }
+}

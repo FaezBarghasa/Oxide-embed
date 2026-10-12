@@ -42,7 +42,7 @@ pub use manifest::{OxideManifest, resolve_db_path};
 pub use markdown_sync::MarkdownMemorySync;
 pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
 pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus, ProceduralSkill};
-pub use model::MentalModel;
+pub use model::{CrateCatalogEntry, MentalModel};
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
 pub use reflect::{ReflectEngine, ReflectResult};
 pub use retrieval::{FusedItem, RrfCandidate, RrfScorer};

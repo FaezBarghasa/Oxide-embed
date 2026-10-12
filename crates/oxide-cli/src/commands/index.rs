@@ -14,10 +14,7 @@ pub async fn handle_index(
     device_override: Option<&str>,
     batch_size_override: Option<usize>,
 ) -> Result<()> {
-    let oxide_dir = project_root.join(".oxide");
-    if !oxide_dir.exists() {
-        return Err(OxideError::NotInitialized(project_root.to_path_buf()));
-    }
+    let oxide_dir = crate::commands::init::ensure_initialized(project_root, None)?;
 
     let manifest = OxideManifest::load_from_dir(&oxide_dir)?;
     let config = OxideConfig::load_from_dir(&oxide_dir)?;
