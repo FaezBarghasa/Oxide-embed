@@ -12,9 +12,9 @@ use commands::{
     handle_answer, handle_callees, handle_callers, handle_conflicts, handle_consolidate,
     handle_context, handle_distill, handle_doctor, handle_explain, handle_export, handle_handoff,
     handle_impact, handle_import, handle_index, handle_init, handle_install_hook, handle_memify,
-    handle_model_create, handle_model_get, handle_model_list,
-    handle_outline, handle_read, handle_recall, handle_reflect, handle_remember, handle_report, handle_run,
-    handle_search, handle_sync_notes, handle_tokenmap,
+    handle_model_create, handle_model_get, handle_model_list, handle_outline, handle_read,
+    handle_recall, handle_reflect, handle_remember, handle_report, handle_run, handle_search,
+    handle_sync_notes, handle_tokenmap,
 };
 use mcp::McpServer;
 use std::env;

@@ -39,10 +39,7 @@ impl ReflectEngine {
     }
 
     /// Evaluates if a matching fresh Mental Model answers the query.
-    pub fn resolve_standing_model(
-        &self,
-        candidate_models: &[MentalModel],
-    ) -> Option<MentalModel> {
+    pub fn resolve_standing_model(&self, candidate_models: &[MentalModel]) -> Option<MentalModel> {
         for model in candidate_models {
             if !model.is_stale {
                 return Some(model.clone());
@@ -52,11 +49,7 @@ impl ReflectEngine {
     }
 
     /// Synthesizes an evidence-grounded reflection from 4-way fused candidates.
-    pub fn synthesize_from_fused(
-        &self,
-        query: &str,
-        fused_items: &[FusedItem],
-    ) -> ReflectResult {
+    pub fn synthesize_from_fused(&self, query: &str, fused_items: &[FusedItem]) -> ReflectResult {
         let budget_candidates: Vec<_> = fused_items
             .iter()
             .map(|item| item.to_budget_candidate())
@@ -112,11 +105,7 @@ mod tests {
     #[test]
     fn test_reflect_engine_stale_model_rejected() {
         let engine = ReflectEngine::default();
-        let mut model = MentalModel::new(
-            "auth",
-            "How does auth work?",
-            "Auth uses old tokens.",
-        );
+        let mut model = MentalModel::new("auth", "How does auth work?", "Auth uses old tokens.");
         model.is_stale = true;
 
         let res = engine.resolve_standing_model(&[model]);

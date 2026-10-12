@@ -32,7 +32,10 @@ pub async fn handle_model_create(
     }
 
     store.upsert_mental_model(&model).await?;
-    println!("✅ Created Mental Model '{}': {}", model.topic, model.question);
+    println!(
+        "✅ Created Mental Model '{}': {}",
+        model.topic, model.question
+    );
 
     Ok(())
 }
@@ -63,7 +66,11 @@ pub async fn handle_model_list(project_root: &Path) -> Result<()> {
     println!("{:-<92}", "");
 
     for m in models {
-        let status = if m.is_stale { "⚠️ STALE" } else { "✅ FRESH" };
+        let status = if m.is_stale {
+            "⚠️ STALE"
+        } else {
+            "✅ FRESH"
+        };
         let display_q = if m.question.len() > 37 {
             format!("{}...", &m.question[..37])
         } else {

@@ -1138,22 +1138,30 @@ impl McpServer {
             }
 
             "oxide_reflect" => {
-                let st = store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
+                let st =
+                    store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let budget = args.get("budget").and_then(|v| v.as_u64()).unwrap_or(1500) as usize;
-                let force_fresh = args.get("force_fresh").and_then(|v| v.as_bool()).unwrap_or(false);
+                let force_fresh = args
+                    .get("force_fresh")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
 
                 let embedder = CandleBertEmbedder::new_offline();
                 let query_emb = embedder.embed(query).await.ok();
 
                 let engine = oxide_core::ReflectEngine::new(budget);
 
-                if !force_fresh && let Some(ref emb) = query_emb {
-                    if let Ok(matching_models) = st.search_mental_models(emb, 3).await {
-                        if let Some(model) = engine.resolve_standing_model(&matching_models) {
-                            return Ok(format!("💡 [Mental Model Hit (Zero-Token Synthesis)]: {}\n\n{}", model.topic, model.to_markdown()));
-                        }
-                    }
+                if !force_fresh
+                    && let Some(ref emb) = query_emb
+                    && let Ok(matching_models) = st.search_mental_models(emb, 3).await
+                    && let Some(model) = engine.resolve_standing_model(&matching_models)
+                {
+                    return Ok(format!(
+                        "💡 [Mental Model Hit (Zero-Token Synthesis)]: {}\n\n{}",
+                        model.topic,
+                        model.to_markdown()
+                    ));
                 }
 
                 // 4-Way RRF Recall
@@ -1168,7 +1176,10 @@ impl McpServer {
                     if let Ok(hits) = st.search(&sq).await {
                         for hit in hits {
                             vector_ranked.push(oxide_core::RrfCandidate {
-                                key: format!("{}:{}-{}", hit.file_path, hit.start_line, hit.end_line),
+                                key: format!(
+                                    "{}:{}-{}",
+                                    hit.file_path, hit.start_line, hit.end_line
+                                ),
                                 title: hit.symbol_name.unwrap_or_else(|| hit.file_path.clone()),
                                 content: hit.text,
                                 source_type: "code_chunk".to_string(),
@@ -1202,7 +1213,10 @@ impl McpServer {
                 }
 
                 let mut temporal_ranked = Vec::new();
-                if let Ok(memories) = st.recall_memories(query_emb.as_deref(), None, &[], None, 10).await {
+                if let Ok(memories) = st
+                    .recall_memories(query_emb.as_deref(), None, &[], None, 10)
+                    .await
+                {
                     for mem in memories {
                         temporal_ranked.push(oxide_core::RrfCandidate {
                             key: mem.id.0.clone(),
@@ -1217,7 +1231,10 @@ impl McpServer {
                     }
                 }
 
-                let fused = engine.rrf_scorer.fuse(&vector_ranked, &lexical_ranked, &[], &temporal_ranked);
+                let fused =
+                    engine
+                        .rrf_scorer
+                        .fuse(&vector_ranked, &lexical_ranked, &[], &temporal_ranked);
                 let reflect_result = engine.synthesize_from_fused(query, &fused);
 
                 let mut cit_str = String::new();
@@ -1235,7 +1252,8 @@ impl McpServer {
             }
 
             "oxide_model_list" => {
-                let st = store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
+                let st =
+                    store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
                 let models = st.list_mental_models().await?;
                 if models.is_empty() {
                     return Ok("No Mental Models found in project.".to_string());
@@ -1243,14 +1261,22 @@ impl McpServer {
                 let mut out = String::new();
                 out.push_str(&format!("🧠 Active Mental Models ({})\n\n", models.len()));
                 for m in models {
-                    let status = if m.is_stale { "⚠️ STALE" } else { "✅ FRESH" };
-                    out.push_str(&format!("- **{}** [{}] — {}\n", m.topic, status, m.question));
+                    let status = if m.is_stale {
+                        "⚠️ STALE"
+                    } else {
+                        "✅ FRESH"
+                    };
+                    out.push_str(&format!(
+                        "- **{}** [{}] — {}\n",
+                        m.topic, status, m.question
+                    ));
                 }
                 Ok(out)
             }
 
             "oxide_model_get" => {
-                let st = store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
+                let st =
+                    store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
                 let topic = args.get("topic").and_then(|v| v.as_str()).unwrap_or("");
                 if let Some(m) = st.get_mental_model(topic).await? {
                     Ok(m.to_markdown())
@@ -1260,19 +1286,28 @@ impl McpServer {
             }
 
             "oxide_model_create" => {
-                let st = store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
+                let st =
+                    store.ok_or_else(|| OxideError::Database("Store not initialized".into()))?;
                 let topic = args.get("topic").and_then(|v| v.as_str()).unwrap_or("");
                 let question = args.get("question").and_then(|v| v.as_str()).unwrap_or("");
                 let answer = args.get("answer").and_then(|v| v.as_str()).unwrap_or("");
                 let symbols: Vec<String> = args
                     .get("symbols")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
                     .unwrap_or_default();
                 let files: Vec<String> = args
                     .get("files")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
                     .unwrap_or_default();
 
                 let mut model = oxide_core::MentalModel::new(topic, question, answer);
@@ -1286,7 +1321,10 @@ impl McpServer {
                 }
 
                 st.upsert_mental_model(&model).await?;
-                Ok(format!("Created Mental Model '{}': {}", model.topic, model.question))
+                Ok(format!(
+                    "Created Mental Model '{}': {}",
+                    model.topic, model.question
+                ))
             }
 
             _ => Err(OxideError::Config(format!("Unknown tool: {}", tool_name))),
