@@ -59,6 +59,7 @@ DEFINE FIELD backup_path ON oxide_migration TYPE option<string>;
 DEFINE TABLE calls SCHEMAFULL;
 DEFINE FIELD in ON calls TYPE record<symbol>;
 DEFINE FIELD out ON calls TYPE record<symbol>;
+DEFINE FIELD caller_id ON calls TYPE option<string>;
 DEFINE FIELD caller_name ON calls TYPE option<string>;
 DEFINE FIELD callee_name ON calls TYPE option<string>;
 DEFINE FIELD line ON calls TYPE option<int>;

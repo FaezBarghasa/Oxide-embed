@@ -385,6 +385,7 @@ impl ProjectStore for SurrealProjectStore {
             UPSERT type::record('calls', $id) SET
                 in = type::record('symbol', $caller_id),
                 out = type::record('symbol', $callee_name),
+                caller_id = $caller_id,
                 caller_name = (SELECT VALUE name FROM type::record('symbol', $caller_id))[0] ?? $caller_id,
                 callee_name = $callee_name,
                 line = $line,
