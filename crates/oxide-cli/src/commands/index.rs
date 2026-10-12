@@ -1,4 +1,4 @@
-use oxide_core::error::Result;
+use oxide_core::error::{OxideError, Result};
 use oxide_core::{OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::device::{device_name, optimal_batch_size};
@@ -50,7 +50,9 @@ pub async fn handle_index(
         config.index.ignore.clone(),
     );
 
-    let files = walker.walk()?;
+    let files = tokio::task::spawn_blocking(move || walker.walk())
+        .await
+        .map_err(|e| OxideError::Other(e.to_string()))??;
     println!("Found {} indexable files", files.len());
 
     // Fetch existing files hash map from DB if not force

@@ -364,7 +364,10 @@ impl ProjectStore for SurrealProjectStore {
                 query = query
                     .bind((format!("id_{idx}"), id_str))
                     .bind((format!("file_id_{idx}"), chunk.file_id.0.clone()))
-                    .bind((format!("symbol_id_{idx}"), chunk.symbol_id.as_ref().map(|s| s.0.clone())))
+                    .bind((
+                        format!("symbol_id_{idx}"),
+                        chunk.symbol_id.as_ref().map(|s| s.0.clone()),
+                    ))
                     .bind((format!("kind_{idx}"), chunk.kind.as_str()))
                     .bind((format!("text_{idx}"), chunk.text.clone()))
                     .bind((format!("outline_{idx}"), chunk.outline.clone()))
@@ -372,8 +375,14 @@ impl ProjectStore for SurrealProjectStore {
                     .bind((format!("start_line_{idx}"), chunk.start_line as i64))
                     .bind((format!("end_line_{idx}"), chunk.end_line as i64))
                     .bind((format!("embedding_{idx}"), chunk.embedding.clone()))
-                    .bind((format!("embedding_model_{idx}"), chunk.embedding_model.clone()))
-                    .bind((format!("embedding_dim_{idx}"), chunk.embedding_dim.map(|d| d as i64)))
+                    .bind((
+                        format!("embedding_model_{idx}"),
+                        chunk.embedding_model.clone(),
+                    ))
+                    .bind((
+                        format!("embedding_dim_{idx}"),
+                        chunk.embedding_dim.map(|d| d as i64),
+                    ))
                     .bind((format!("vector_set_id_{idx}"), chunk.vector_set_id.clone()));
             }
 

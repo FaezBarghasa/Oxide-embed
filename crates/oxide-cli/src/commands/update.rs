@@ -1,4 +1,4 @@
-use oxide_core::error::Result;
+use oxide_core::error::{OxideError, Result};
 use oxide_core::{CrateCatalogEntry, MemoryDistiller, OxideConfig, OxideManifest};
 use oxide_db::{ProjectStore, SurrealProjectStore};
 use oxide_ml::device::{device_name, optimal_batch_size};
@@ -7,8 +7,8 @@ use oxide_parser::languages::get_extractor;
 use oxide_parser::{AnatomyScanner, Chunker, DocLinker, Language, ProjectWalker};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Instant;
+use tokio::process::Command;
 
 pub async fn handle_update(
     project_root: &Path,
@@ -49,7 +49,9 @@ pub async fn handle_update(
         config.index.ignore.clone(),
     );
 
-    let disk_files = walker.walk()?;
+    let disk_files = tokio::task::spawn_blocking(move || walker.walk())
+        .await
+        .map_err(|e| OxideError::Other(e.to_string()))??;
     let mut disk_by_rel_path: HashMap<String, (&oxide_core::FileRecord, &String)> = HashMap::new();
     for (f, c) in &disk_files {
         disk_by_rel_path.insert(f.relative_path.clone(), (f, c));
@@ -389,7 +391,8 @@ async fn distill_git_history(
             "--pretty=format:%H|%an|%s%n%b%n---COMMIT_END---",
         ])
         .current_dir(project_root)
-        .output();
+        .output()
+        .await;
 
     let Ok(output) = output else {
         return Ok(0);
