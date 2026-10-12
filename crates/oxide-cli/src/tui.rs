@@ -1,10 +1,9 @@
 use std::io;
 use std::path::Path;
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -210,9 +209,12 @@ async fn run_tui_inner(project_root: &Path) -> anyhow::Result<()> {
 async fn run_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut TuiApp,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<()>
+where
+    <B as ratatui::backend::Backend>::Error: Send + Sync + 'static,
+{
     use crossterm::event::EventStream;
-    use tokio_stream::StreamExt;
+    use futures_util::StreamExt;
 
     let mut event_stream = EventStream::new();
 

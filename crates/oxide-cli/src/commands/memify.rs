@@ -22,7 +22,7 @@ pub async fn handle_memify(
         decay_days, prune_threshold
     );
 
-    let engine = MemifyEngine::new(decay_days, prune_threshold);
+    let _engine = MemifyEngine::new(decay_days, prune_threshold);
     let symbol_count = store.count_symbols().await?;
     println!("Evaluated {} symbols in memory graph.", symbol_count);
 

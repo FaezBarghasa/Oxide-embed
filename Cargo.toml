@@ -24,6 +24,7 @@ oxide-ml = { path = "crates/oxide-ml" }
 # Async & Runtime
 tokio = { version = "1.43", features = ["full"] }
 async-trait = "0.1.86"
+futures-util = "0.3"
 
 # Serialization & Config
 serde = { version = "1.0.218", features = ["derive"] }

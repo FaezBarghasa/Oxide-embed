@@ -76,7 +76,7 @@ impl WorkspaceWatcher {
                             }
                         }
                         Some(_) => {}
-                        None => break, // Channel closed
+                        None => break Ok(()), // Channel closed
                     }
                 }
                 _ = tokio::time::sleep(Duration::from_millis(100)) => {

@@ -31,9 +31,9 @@ impl MemoryDistiller {
                 if let Some(after_colon) = rest.strip_prefix(':') {
                     return Some(after_colon.trim().to_string());
                 }
-                if rest.starts_with('(') {
-                    if let Some(idx) = rest.find("):") {
-                        return Some(rest[idx + 2..].trim().to_string());
+                if let Some(scoped) = rest.strip_prefix('(') {
+                    if let Some((_scope, after)) = scoped.split_once("):") {
+                        return Some(after.trim().to_string());
                     }
                 }
             }
@@ -64,14 +64,13 @@ impl MemoryDistiller {
                 rest,
                 format!("Performance optimization in {}: {}", commit_hash, trimmed),
             )
-        } else if let Some(rest) = strip_conventional(first_line, "docs") {
+        } else {
+            let rest = strip_conventional(first_line, "docs")?;
             (
                 MemoryKind::Fact,
                 rest,
                 format!("Documentation update in {}: {}", commit_hash, trimmed),
             )
-        } else {
-            return None;
         };
 
         let mut record = MemoryRecord::new(project_id, kind, title, content);

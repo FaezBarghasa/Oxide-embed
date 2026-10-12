@@ -3832,6 +3832,7 @@ dependencies = [
  "chrono",
  "clap",
  "crossterm",
+ "futures-util",
  "notify",
  "oxide-core",
  "oxide-db",

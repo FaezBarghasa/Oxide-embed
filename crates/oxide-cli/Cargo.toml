@@ -29,10 +29,11 @@ sha2.workspace = true
 walkdir.workspace = true
 ratatui = { workspace = true, optional = true }
 crossterm = { workspace = true, optional = true }
+futures-util = { workspace = true, optional = true }
 
 [features]
 default = ["tui"]
-tui = ["dep:ratatui", "dep:crossterm"]
+tui = ["dep:ratatui", "dep:crossterm", "dep:futures-util"]
 cuda = ["oxide-ml/cuda"]
 metal = ["oxide-ml/metal"]
 rocm = ["oxide-ml/rocm"]
