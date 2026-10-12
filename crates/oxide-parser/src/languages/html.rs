@@ -26,17 +26,20 @@ impl LanguageExtractor for HtmlExtractor {
 }
 
 fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<SymbolRecord>) {
-    if node.kind() == "element" || node.kind() == "script_element" || node.kind() == "style_element" {
+    if node.kind() == "element" || node.kind() == "script_element" || node.kind() == "style_element"
+    {
         let start_tag = node.child_by_field_name("start_tag").or_else(|| {
             let mut cursor = node.walk();
             node.children(&mut cursor).find(|c| c.kind() == "start_tag")
         });
 
         let tag_name = start_tag
-            .and_then(|st| st.child_by_field_name("tag_name").or_else(|| {
-                let mut cursor = st.walk();
-                st.children(&mut cursor).find(|c| c.kind() == "tag_name")
-            }))
+            .and_then(|st| {
+                st.child_by_field_name("tag_name").or_else(|| {
+                    let mut cursor = st.walk();
+                    st.children(&mut cursor).find(|c| c.kind() == "tag_name")
+                })
+            })
             .and_then(|tn| tn.utf8_text(content.as_bytes()).ok());
 
         let id_val = start_tag.and_then(|st| {
@@ -46,10 +49,18 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
                     let mut attr_cursor = attr.walk();
                     let mut is_id = false;
                     for part in attr.children(&mut attr_cursor) {
-                        if part.kind() == "attribute_name" && part.utf8_text(content.as_bytes()).ok() == Some("id") {
+                        if part.kind() == "attribute_name"
+                            && part.utf8_text(content.as_bytes()).ok() == Some("id")
+                        {
                             is_id = true;
-                        } else if is_id && (part.kind() == "quoted_attribute_value" || part.kind() == "attribute_value") {
-                            return part.utf8_text(content.as_bytes()).ok().map(|s| s.trim_matches('"').trim_matches('\''));
+                        } else if is_id
+                            && (part.kind() == "quoted_attribute_value"
+                                || part.kind() == "attribute_value")
+                        {
+                            return part
+                                .utf8_text(content.as_bytes())
+                                .ok()
+                                .map(|s| s.trim_matches('"').trim_matches('\''));
                         }
                     }
                 }
@@ -60,7 +71,17 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
         if let Some(tag) = tag_name {
             let is_notable = id_val.is_some()
                 || tag.contains('-')
-                || matches!(tag, "main" | "nav" | "header" | "footer" | "form" | "section" | "template" | "dialog");
+                || matches!(
+                    tag,
+                    "main"
+                        | "nav"
+                        | "header"
+                        | "footer"
+                        | "form"
+                        | "section"
+                        | "template"
+                        | "dialog"
+                );
 
             if is_notable {
                 let display_name = match id_val {
@@ -70,7 +91,12 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
 
                 let start_point = node.start_position();
                 let end_point = node.end_position();
-                let fingerprint = format!("html:{}:{}-{}", display_name, start_point.row + 1, end_point.row + 1);
+                let fingerprint = format!(
+                    "html:{}:{}-{}",
+                    display_name,
+                    start_point.row + 1,
+                    end_point.row + 1
+                );
                 let symbol_id = SymbolId::new(file_id, &display_name);
 
                 let signature = start_tag

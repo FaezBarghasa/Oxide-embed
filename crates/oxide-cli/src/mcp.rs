@@ -968,7 +968,10 @@ impl McpServer {
 
             "oxide_distill_skill" => {
                 let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                let description = args.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                let description = args
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
                 let triggers = args
                     .get("triggers")
                     .and_then(|v| v.as_array())
@@ -1023,7 +1026,8 @@ impl McpServer {
 
                 let skills_dir = self.workspace_dir.join(".oxide").join("skills");
                 std::fs::create_dir_all(&skills_dir)?;
-                let file_path = skills_dir.join(format!("{}.md", name.replace(' ', "-").to_lowercase()));
+                let file_path =
+                    skills_dir.join(format!("{}.md", name.replace(' ', "-").to_lowercase()));
                 std::fs::write(&file_path, skill.to_aip_markdown())?;
 
                 if let Some(st) = store {

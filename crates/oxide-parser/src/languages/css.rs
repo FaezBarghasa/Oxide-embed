@@ -37,11 +37,22 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
             if let Some(sel_node) = selectors_n
                 && let Ok(selector_text) = sel_node.utf8_text(content.as_bytes())
             {
-                let clean_selector = selector_text.lines().next().unwrap_or("").trim().trim_end_matches('{').trim();
+                let clean_selector = selector_text
+                    .lines()
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .trim_end_matches('{')
+                    .trim();
                 if !clean_selector.is_empty() {
                     let start_point = node.start_position();
                     let end_point = node.end_position();
-                    let fingerprint = format!("css:{}:{}-{}", clean_selector, start_point.row + 1, end_point.row + 1);
+                    let fingerprint = format!(
+                        "css:{}:{}-{}",
+                        clean_selector,
+                        start_point.row + 1,
+                        end_point.row + 1
+                    );
                     let symbol_id = SymbolId::new(file_id, clean_selector);
 
                     symbols.push(SymbolRecord {
@@ -66,7 +77,8 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
         "keyframes_statement" => {
             let name_n = node.child_by_field_name("name").or_else(|| {
                 let mut cursor = node.walk();
-                node.children(&mut cursor).find(|c| c.kind() == "keyframes_name")
+                node.children(&mut cursor)
+                    .find(|c| c.kind() == "keyframes_name")
             });
 
             if let Some(n) = name_n
@@ -75,7 +87,12 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
                 let clean_name = name.trim();
                 let start_point = node.start_position();
                 let end_point = node.end_position();
-                let fingerprint = format!("keyframes:{}:{}-{}", clean_name, start_point.row + 1, end_point.row + 1);
+                let fingerprint = format!(
+                    "keyframes:{}:{}-{}",
+                    clean_name,
+                    start_point.row + 1,
+                    end_point.row + 1
+                );
                 let symbol_id = SymbolId::new(file_id, clean_name);
 
                 symbols.push(SymbolRecord {

@@ -40,7 +40,12 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
         if !heading_text.is_empty() {
             let start_point = node.start_position();
             let end_point = node.end_position();
-            let fingerprint = format!("md:{}:{}-{}", heading_text, start_point.row + 1, end_point.row + 1);
+            let fingerprint = format!(
+                "md:{}:{}-{}",
+                heading_text,
+                start_point.row + 1,
+                end_point.row + 1
+            );
             let symbol_id = SymbolId::new(file_id, heading_text);
 
             symbols.push(SymbolRecord {
@@ -61,7 +66,6 @@ fn traverse_node(node: Node, content: &str, file_id: &FileId, symbols: &mut Vec<
             });
         }
     }
-
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {

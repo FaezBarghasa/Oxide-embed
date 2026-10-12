@@ -63,7 +63,9 @@ pub async fn handle_index(
             let raw_rows: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
             for r in raw_rows {
                 let id_str = match r.get("id") {
-                    Some(serde_json::Value::String(s)) => s.strip_prefix("file:").unwrap_or(s).to_string(),
+                    Some(serde_json::Value::String(s)) => {
+                        s.strip_prefix("file:").unwrap_or(s).to_string()
+                    }
                     Some(val) => val.to_string(),
                     None => continue,
                 };
@@ -87,11 +89,12 @@ pub async fn handle_index(
 
     // 1. First Pass: Files, Symbols, Chunks extraction, Call Graph, and Imports
     for (file_record, content) in &files {
-        if !force && let Some(prev_hash) = existing_hashes.get(&file_record.id.0) {
-            if file_record.content_hash.as_ref() == Some(prev_hash) {
-                // File unchanged; skip re-indexing
-                continue;
-            }
+        if !force
+            && let Some(prev_hash) = existing_hashes.get(&file_record.id.0)
+            && file_record.content_hash.as_ref() == Some(prev_hash)
+        {
+            // File unchanged; skip re-indexing
+            continue;
         }
 
         store.upsert_file(file_record).await?;

@@ -207,7 +207,11 @@ impl WorkspaceWatcher {
             DELETE chunk WHERE file_id = $fid;
             DELETE imports WHERE in = type::record('file', $fid);
         "#;
-        let _ = store.db().query(purge_sql).bind(("fid", fid.0.clone())).await;
+        let _ = store
+            .db()
+            .query(purge_sql)
+            .bind(("fid", fid.0.clone()))
+            .await;
 
         let mut sym_count = 0;
 

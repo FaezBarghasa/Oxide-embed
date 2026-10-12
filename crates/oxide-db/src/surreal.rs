@@ -741,7 +741,8 @@ impl ProjectStore for SurrealProjectStore {
                     summary
                 FROM symbol
                 LIMIT $limit;
-            "#.to_string()
+            "#
+            .to_string()
         } else {
             r#"
                 SELECT 

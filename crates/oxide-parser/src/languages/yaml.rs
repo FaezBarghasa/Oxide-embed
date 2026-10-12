@@ -50,9 +50,11 @@ fn traverse_node(
             let val_n = node.child_by_field_name("value");
             let is_container = val_n.is_some_and(|v| {
                 let vk = v.kind();
-                vk == "block_mapping" || vk == "block_sequence" || vk == "flow_mapping" || vk == "flow_sequence"
+                vk == "block_mapping"
+                    || vk == "block_sequence"
+                    || vk == "flow_mapping"
+                    || vk == "flow_sequence"
             });
-
 
             let kind = if is_container {
                 SymbolKind::Struct
@@ -68,7 +70,12 @@ fn traverse_node(
                     .map(|val| format!("{}: {}", key, val.lines().next().unwrap_or("").trim()))
             };
 
-            let fingerprint = format!("yaml:{}:{}-{}", qualified_name, start_point.row + 1, end_point.row + 1);
+            let fingerprint = format!(
+                "yaml:{}:{}-{}",
+                qualified_name,
+                start_point.row + 1,
+                end_point.row + 1
+            );
             let symbol_id = SymbolId::new(file_id, &qualified_name);
 
             symbols.push(SymbolRecord {

@@ -30,7 +30,11 @@ pub async fn handle_consolidate(project_root: &Path) -> Result<()> {
             symptom: m.title,
             root_cause: m.content.clone(),
             resolution: m.content,
-            component: m.tags.first().cloned().unwrap_or_else(|| "core".to_string()),
+            component: m
+                .tags
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "core".to_string()),
             embedding: None,
         })
         .collect();

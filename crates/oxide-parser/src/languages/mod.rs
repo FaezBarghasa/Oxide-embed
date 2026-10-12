@@ -191,4 +191,3 @@ module gear_mount(teeth = 12) {
         assert!(symbols.iter().any(|s| s.name == "gear_mount"));
     }
 }
-

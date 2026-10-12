@@ -61,7 +61,12 @@ fn traverse_node(
                 .map(|val| format!("{}: {}", key, val))
         };
 
-        let fingerprint = format!("json:{}:{}-{}", qualified_name, start_point.row + 1, end_point.row + 1);
+        let fingerprint = format!(
+            "json:{}:{}-{}",
+            qualified_name,
+            start_point.row + 1,
+            end_point.row + 1
+        );
         let symbol_id = SymbolId::new(file_id, &qualified_name);
 
         symbols.push(SymbolRecord {

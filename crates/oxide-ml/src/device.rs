@@ -9,7 +9,9 @@ pub fn select_device(preference: &str) -> Device {
             {
                 match Device::new_cuda(0) {
                     Ok(dev) => {
-                        println!("🚀 Hardware acceleration active: NVIDIA CUDA GPU 0 (Tensor Cores)");
+                        println!(
+                            "🚀 Hardware acceleration active: NVIDIA CUDA GPU 0 (Tensor Cores)"
+                        );
                         return dev;
                     }
                     Err(err) => {
@@ -42,7 +44,9 @@ pub fn select_device(preference: &str) -> Device {
             }
             #[cfg(not(feature = "cuda"))]
             {
-                panic!("CUDA acceleration requested but oxide-embed was compiled without '--features cuda'");
+                panic!(
+                    "CUDA acceleration requested but oxide-embed was compiled without '--features cuda'"
+                );
             }
         }
         s if s.starts_with("cuda:") => {

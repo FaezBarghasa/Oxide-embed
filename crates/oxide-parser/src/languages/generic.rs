@@ -307,7 +307,10 @@ impl LanguageExtractor for GenericConfigExtractor {
                             is_macro_node: true,
                             parent_id: None,
                             breadcrumbs: vec![name.to_string()],
-                            summary: Some(format!("SystemVerilog module {} at line {}", name, line_no)),
+                            summary: Some(format!(
+                                "SystemVerilog module {} at line {}",
+                                name, line_no
+                            )),
                         });
                     }
                 } else if trimmed.starts_with("interface ") {
@@ -337,7 +340,11 @@ impl LanguageExtractor for GenericConfigExtractor {
                     let rest = trimmed.trim_start_matches(keyword).trim();
                     let cleaned = rest.trim_start_matches("automatic ").trim();
                     let before_paren = cleaned.split('(').next().unwrap_or("").trim();
-                    let name = before_paren.split_whitespace().next_back().unwrap_or("").trim_end_matches(';');
+                    let name = before_paren
+                        .split_whitespace()
+                        .next_back()
+                        .unwrap_or("")
+                        .trim_end_matches(';');
                     if !name.is_empty() {
                         symbols.push(SymbolRecord {
                             id: SymbolId::new(file_id, name),

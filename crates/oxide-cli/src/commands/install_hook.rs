@@ -26,14 +26,12 @@ pub async fn handle_install_hook(project_root: &Path, tool: &str) -> Result<()> 
             serde_json::json!({})
         };
 
-        let servers = root_json
-            .as_object_mut()
-            .and_then(|obj| {
-                if !obj.contains_key("mcpServers") {
-                    obj.insert("mcpServers".to_string(), serde_json::json!({}));
-                }
-                obj.get_mut("mcpServers").and_then(|v| v.as_object_mut())
-            });
+        let servers = root_json.as_object_mut().and_then(|obj| {
+            if !obj.contains_key("mcpServers") {
+                obj.insert("mcpServers".to_string(), serde_json::json!({}));
+            }
+            obj.get_mut("mcpServers").and_then(|v| v.as_object_mut())
+        });
 
         if let Some(servers_map) = servers {
             servers_map.insert(

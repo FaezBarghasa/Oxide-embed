@@ -31,10 +31,10 @@ impl MemoryDistiller {
                 if let Some(after_colon) = rest.strip_prefix(':') {
                     return Some(after_colon.trim().to_string());
                 }
-                if let Some(scoped) = rest.strip_prefix('(') {
-                    if let Some((_scope, after)) = scoped.split_once("):") {
-                        return Some(after.trim().to_string());
-                    }
+                if let Some(scoped) = rest.strip_prefix('(')
+                    && let Some((_scope, after)) = scoped.split_once("):")
+                {
+                    return Some(after.trim().to_string());
                 }
             }
             None

@@ -47,7 +47,10 @@ pub async fn handle_memify(
         .bind(("threshold", prune_threshold as f64))
         .await;
 
-    println!("Memify cycle completed. Stale graph connections pruned below threshold {}.", prune_threshold);
+    println!(
+        "Memify cycle completed. Stale graph connections pruned below threshold {}.",
+        prune_threshold
+    );
 
     Ok(())
 }

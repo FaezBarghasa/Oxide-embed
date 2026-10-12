@@ -158,7 +158,10 @@ impl ProceduralSkill {
         for (i, step) in self.workflow_steps.iter().enumerate() {
             md.push_str(&format!("{}. {}\n", i + 1, step));
         }
-        md.push_str(&format!("\n*Provenance: {} (Executed {} times)*\n", self.provenance_project, self.success_count));
+        md.push_str(&format!(
+            "\n*Provenance: {} (Executed {} times)*\n",
+            self.provenance_project, self.success_count
+        ));
         md
     }
 }
@@ -297,11 +300,15 @@ impl ConflictDetector {
         // If they share significant common words/tokens and opposite assertions
         let ex_words: std::collections::HashSet<&str> = ex_lower
             .split_whitespace()
-            .filter(|w| w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid")
+            .filter(|w| {
+                w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid"
+            })
             .collect();
         let in_words: std::collections::HashSet<&str> = in_lower
             .split_whitespace()
-            .filter(|w| w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid")
+            .filter(|w| {
+                w.len() > 3 && *w != "never" && *w != "always" && *w != "prefer" && *w != "avoid"
+            })
             .collect();
 
         let overlap = ex_words.intersection(&in_words).count();

@@ -129,13 +129,17 @@ impl GraphTraversalService {
                     let call_sql = r#"
                         SELECT callee_name FROM calls WHERE caller_name = $target OR in = type::record('symbol', $target);
                     "#;
-                    if let Ok(mut callee_res) = store.db().query(call_sql).bind(("target", target)).await {
-                        let raw_callees: Vec<serde_json::Value> = callee_res.take(0).unwrap_or_default();
+                    if let Ok(mut callee_res) =
+                        store.db().query(call_sql).bind(("target", target)).await
+                    {
+                        let raw_callees: Vec<serde_json::Value> =
+                            callee_res.take(0).unwrap_or_default();
                         for v in raw_callees {
-                            if let Ok(row) = serde_json::from_value::<CalleeRow>(v) {
-                                if !row.callee_name.is_empty() && visited_callees.insert(row.callee_name.clone()) {
-                                    next_targets.push(row.callee_name);
-                                }
+                            if let Ok(row) = serde_json::from_value::<CalleeRow>(v)
+                                && !row.callee_name.is_empty()
+                                && visited_callees.insert(row.callee_name.clone())
+                            {
+                                next_targets.push(row.callee_name);
                             }
                         }
                     }
@@ -152,13 +156,17 @@ impl GraphTraversalService {
                     let caller_sql = r#"
                         SELECT caller_name FROM calls WHERE callee_name = $target OR out = type::record('symbol', $target);
                     "#;
-                    if let Ok(mut caller_res) = store.db().query(caller_sql).bind(("target", target)).await {
-                        let raw_callers: Vec<serde_json::Value> = caller_res.take(0).unwrap_or_default();
+                    if let Ok(mut caller_res) =
+                        store.db().query(caller_sql).bind(("target", target)).await
+                    {
+                        let raw_callers: Vec<serde_json::Value> =
+                            caller_res.take(0).unwrap_or_default();
                         for v in raw_callers {
-                            if let Ok(row) = serde_json::from_value::<CallerRow>(v) {
-                                if !row.caller_name.is_empty() && visited_callers.insert(row.caller_name.clone()) {
-                                    next_targets.push(row.caller_name);
-                                }
+                            if let Ok(row) = serde_json::from_value::<CallerRow>(v)
+                                && !row.caller_name.is_empty()
+                                && visited_callers.insert(row.caller_name.clone())
+                            {
+                                next_targets.push(row.caller_name);
                             }
                         }
                     }

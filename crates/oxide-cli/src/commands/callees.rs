@@ -35,7 +35,12 @@ pub async fn handle_callees(
                     })
                     .collect();
                 let packed = oxide_core::TokenBudgetPacker::pack(candidates, limit);
-                println!("\n📊 Packed {} callees within {} token budget (~{} tokens used):", packed.included.len(), limit, packed.used_tokens);
+                println!(
+                    "\n📊 Packed {} callees within {} token budget (~{} tokens used):",
+                    packed.included.len(),
+                    limit,
+                    packed.used_tokens
+                );
                 for item in packed.included {
                     println!("  {}", item.content);
                 }
