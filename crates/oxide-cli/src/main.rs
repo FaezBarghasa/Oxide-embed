@@ -36,11 +36,6 @@ async fn main() -> ExitCode {
             force,
             device,
             batch_size,
-        }
-        | Commands::Cognify {
-            force,
-            device,
-            batch_size,
         } => handle_index(project_root, force, device.as_deref(), batch_size).await,
         Commands::Outline { path } => handle_outline(project_root, &path).await,
         Commands::Context { task, budget } => handle_context(project_root, &task, budget).await,

@@ -38,7 +38,7 @@ pub use ledger::{TokenLedger, TokenSavingRecord, TokenUsageRecord};
 pub use manifest::{OxideManifest, resolve_db_path};
 pub use markdown_sync::MarkdownMemorySync;
 pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
-pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus};
+pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus, ProceduralSkill};
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
 pub use symbol::{
     CallEdge, ImportEdge, StairHit, SymbolKind, SymbolRecord, deserialize_null_as_empty_vec,

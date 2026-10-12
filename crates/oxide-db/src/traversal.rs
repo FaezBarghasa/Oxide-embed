@@ -45,7 +45,7 @@ impl GraphTraversalService {
     pub async fn get_subgraph(
         store: &SurrealProjectStore,
         symbol_name: &str,
-        _hops: usize,
+        hops: usize,
     ) -> Result<Option<SubgraphContext>> {
         let sql = r#"
             SELECT 
@@ -105,50 +105,71 @@ impl GraphTraversalService {
                 _ => sym.name.clone(),
             };
 
-            // Fetch callers and callees from calls table
-            let call_sql = r#"
-                SELECT callee_name FROM calls WHERE caller_name = $name OR caller_name = $sym_id OR in = type::record('symbol', $sym_id);
-            "#;
-            let mut callee_res = store
-                .db()
-                .query(call_sql)
-                .bind(("name", symbol_name.to_string()))
-                .bind(("sym_id", sym_id_str.clone()))
-                .await
-                .map_err(|e| OxideError::Database(e.to_string()))?;
+            let max_hops = hops.clamp(1, 5);
+            let mut visited_callees = std::collections::HashSet::new();
+            let mut visited_callers = std::collections::HashSet::new();
+            let mut current_callee_targets = vec![sym.name.clone(), sym_id_str.clone()];
+            let mut current_caller_targets = vec![sym.name.clone(), sym_id_str.clone()];
 
             #[derive(Deserialize)]
             struct CalleeRow {
                 callee_name: String,
             }
-            let raw_callees: Vec<serde_json::Value> = callee_res.take(0).unwrap_or_default();
-            let callees: Vec<String> = raw_callees
-                .into_iter()
-                .filter_map(|v| serde_json::from_value::<CalleeRow>(v).ok())
-                .map(|r| r.callee_name)
-                .collect();
-
-            let caller_sql = r#"
-                SELECT caller_name FROM calls WHERE callee_name = $name OR callee_name = $sym_id OR out = type::record('symbol', $sym_id);
-            "#;
-            let mut caller_res = store
-                .db()
-                .query(caller_sql)
-                .bind(("name", symbol_name.to_string()))
-                .bind(("sym_id", sym_id_str.clone()))
-                .await
-                .map_err(|e| OxideError::Database(e.to_string()))?;
-
             #[derive(Deserialize)]
             struct CallerRow {
                 caller_name: String,
             }
-            let raw_callers: Vec<serde_json::Value> = caller_res.take(0).unwrap_or_default();
-            let callers: Vec<String> = raw_callers
-                .into_iter()
-                .filter_map(|v| serde_json::from_value::<CallerRow>(v).ok())
-                .map(|r| r.caller_name)
-                .collect();
+
+            for _ in 0..max_hops {
+                if current_callee_targets.is_empty() {
+                    break;
+                }
+                let mut next_targets = Vec::new();
+                for target in current_callee_targets {
+                    let call_sql = r#"
+                        SELECT callee_name FROM calls WHERE caller_name = $target OR in = type::record('symbol', $target);
+                    "#;
+                    if let Ok(mut callee_res) = store.db().query(call_sql).bind(("target", target)).await {
+                        let raw_callees: Vec<serde_json::Value> = callee_res.take(0).unwrap_or_default();
+                        for v in raw_callees {
+                            if let Ok(row) = serde_json::from_value::<CalleeRow>(v) {
+                                if !row.callee_name.is_empty() && visited_callees.insert(row.callee_name.clone()) {
+                                    next_targets.push(row.callee_name);
+                                }
+                            }
+                        }
+                    }
+                }
+                current_callee_targets = next_targets;
+            }
+
+            for _ in 0..max_hops {
+                if current_caller_targets.is_empty() {
+                    break;
+                }
+                let mut next_targets = Vec::new();
+                for target in current_caller_targets {
+                    let caller_sql = r#"
+                        SELECT caller_name FROM calls WHERE callee_name = $target OR out = type::record('symbol', $target);
+                    "#;
+                    if let Ok(mut caller_res) = store.db().query(caller_sql).bind(("target", target)).await {
+                        let raw_callers: Vec<serde_json::Value> = caller_res.take(0).unwrap_or_default();
+                        for v in raw_callers {
+                            if let Ok(row) = serde_json::from_value::<CallerRow>(v) {
+                                if !row.caller_name.is_empty() && visited_callers.insert(row.caller_name.clone()) {
+                                    next_targets.push(row.caller_name);
+                                }
+                            }
+                        }
+                    }
+                }
+                current_caller_targets = next_targets;
+            }
+
+            let mut callees: Vec<String> = visited_callees.into_iter().collect();
+            callees.sort();
+            let mut callers: Vec<String> = visited_callers.into_iter().collect();
+            callers.sort();
 
             // Fetch doc references
             let doc_sql = r#"

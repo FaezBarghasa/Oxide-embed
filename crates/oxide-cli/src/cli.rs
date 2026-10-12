@@ -31,25 +31,11 @@ pub enum Commands {
     Doctor,
 
     #[command(
-        about = "Index project files, generate AST outlines, extract docs, and build knowledge graph"
+        about = "Index project files, generate AST outlines, extract docs, and build knowledge graph",
+        visible_alias = "cognify"
     )]
     Index {
         #[arg(long, help = "Force re-index all files even if unchanged")]
-        force: bool,
-        #[arg(
-            long,
-            help = "Compute device preference (auto, cuda, metal, rocm, cpu)"
-        )]
-        device: Option<String>,
-        #[arg(long, help = "Embedding batch size")]
-        batch_size: Option<usize>,
-    },
-
-    #[command(
-        about = "Cognify project: full AST parsing, vector embedding, doc-to-graph linking, and knowledge graph construction"
-    )]
-    Cognify {
-        #[arg(long, help = "Force full re-cognify")]
         force: bool,
         #[arg(
             long,

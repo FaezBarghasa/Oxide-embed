@@ -27,6 +27,9 @@ impl CandleBertEmbedder {
             embedder
         } else {
             let device = select_device(device_pref);
+            tracing::warn!(
+                "BGE-small embedding model weights not found in local cache (~/.cache/oxide-embed/models/bge-small-en-v1.5). Running in degraded mock embedding mode."
+            );
             Self {
                 model: None,
                 tokenizer: None,

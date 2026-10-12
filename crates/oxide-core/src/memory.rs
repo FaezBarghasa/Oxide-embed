@@ -36,6 +36,8 @@ pub enum MemoryKind {
     Artifact,
     /// Resolved bugs, compiler diagnostics, and panics
     Error,
+    /// Learned, reusable procedural skills and workflows (Layer 4 Procedural Memory)
+    Skill,
 }
 
 impl MemoryKind {
@@ -54,6 +56,7 @@ impl MemoryKind {
             MemoryKind::Observation,
             MemoryKind::Artifact,
             MemoryKind::Error,
+            MemoryKind::Skill,
         ]
     }
 
@@ -72,6 +75,7 @@ impl MemoryKind {
             Self::Observation => "observation",
             Self::Artifact => "artifact",
             Self::Error => "error",
+            Self::Skill => "skill",
         }
     }
 
@@ -108,6 +112,7 @@ impl FromStr for MemoryKind {
             "observation" => Ok(Self::Observation),
             "artifact" => Ok(Self::Artifact),
             "error" => Ok(Self::Error),
+            "skill" | "procedural" => Ok(Self::Skill),
             other => Err(OxideError::Config(format!(
                 "Unknown memory kind '{other}'. Valid kinds: {}",
                 Self::all()
@@ -117,6 +122,44 @@ impl FromStr for MemoryKind {
                     .join(", ")
             ))),
         }
+    }
+}
+
+/// Reusable cross-project procedural skill (Layer 4)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProceduralSkill {
+    pub name: String,
+    pub description: String,
+    pub triggers: Vec<String>,
+    pub workflow_steps: Vec<String>,
+    pub required_tools: Vec<String>,
+    pub provenance_project: String,
+    pub status: String,
+    pub success_count: usize,
+    pub last_executed_at: DateTime<Utc>,
+    #[serde(default)]
+    pub embedding: Option<Vec<f32>>,
+}
+
+impl ProceduralSkill {
+    pub fn to_aip_markdown(&self) -> String {
+        let mut md = String::new();
+        md.push_str(&format!("# Skill: {}\n\n", self.name));
+        md.push_str(&format!("> {}\n\n", self.description));
+        md.push_str("## Triggers\n");
+        for t in &self.triggers {
+            md.push_str(&format!("- `{}`\n", t));
+        }
+        md.push_str("\n## Required Tools\n");
+        for tool in &self.required_tools {
+            md.push_str(&format!("- `{}`\n", tool));
+        }
+        md.push_str("\n## Execution Workflow\n");
+        for (i, step) in self.workflow_steps.iter().enumerate() {
+            md.push_str(&format!("{}. {}\n", i + 1, step));
+        }
+        md.push_str(&format!("\n*Provenance: {} (Executed {} times)*\n", self.provenance_project, self.success_count));
+        md
     }
 }
 

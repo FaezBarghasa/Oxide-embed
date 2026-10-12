@@ -20,16 +20,31 @@ pub async fn handle_callers(
                 "📞 Callers of `{}` ({} in {}):",
                 ctx.target_symbol, ctx.symbol_kind, ctx.file_path
             );
-            if ctx.callers.is_empty() {
+            if let Some(limit) = budget {
+                let candidates: Vec<oxide_core::BudgetCandidate> = ctx
+                    .callers
+                    .iter()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        oxide_core::BudgetCandidate::new(
+                            format!("caller:{}", i),
+                            c.clone(),
+                            format!("← {}", c),
+                            1.0,
+                        )
+                    })
+                    .collect();
+                let packed = oxide_core::TokenBudgetPacker::pack(candidates, limit);
+                println!("\n📊 Packed {} callers within {} token budget (~{} tokens used):", packed.included.len(), limit, packed.used_tokens);
+                for item in packed.included {
+                    println!("  {}", item.content);
+                }
+            } else if ctx.callers.is_empty() {
                 println!("  (No direct callers indexed)");
             } else {
                 for caller in &ctx.callers {
                     println!("  ← {}", caller);
                 }
-            }
-
-            if let Some(limit) = budget {
-                println!("\n📊 Packed within token budget ({} tokens ceiling)", limit);
             }
             Ok(())
         }

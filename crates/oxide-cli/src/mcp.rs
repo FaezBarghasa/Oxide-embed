@@ -266,6 +266,32 @@ impl McpServer {
                                 },
                                 "required": ["query"]
                             }
+                        },
+                        {
+                            "name": "oxide_distill_skill",
+                            "description": "Distill an engineered procedural skill (Agent Instruction Protocol / AIP) with triggers and workflow steps into .oxide/skills/.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string", "description": "Name of the skill (e.g. stm32-i2c-driver-scaffold)" },
+                                    "description": { "type": "string", "description": "Intent and purpose of the skill" },
+                                    "triggers": { "type": "array", "items": { "type": "string" }, "description": "Keywords or intent triggers" },
+                                    "workflow_steps": { "type": "array", "items": { "type": "string" }, "description": "Sequential steps to execute" },
+                                    "required_tools": { "type": "array", "items": { "type": "string" }, "description": "Tools required by this skill" }
+                                },
+                                "required": ["name", "description", "workflow_steps"]
+                            }
+                        },
+                        {
+                            "name": "oxide_recall_skill",
+                            "description": "Recall procedural skills (Layer 4) matching an intent or trigger.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "query": { "type": "string", "description": "Task intent or trigger keyword" }
+                                },
+                                "required": ["query"]
+                            }
                         }
                     ]
                 })),
@@ -938,6 +964,126 @@ impl McpServer {
                     Ok(out)
                 } else {
                     Err(OxideError::Config("Oxide database not found.".into()))
+                }
+            }
+
+            "oxide_distill_skill" => {
+                let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let description = args.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                let triggers = args
+                    .get("triggers")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let workflow_steps = args
+                    .get("workflow_steps")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let required_tools = args
+                    .get("required_tools")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                if name.is_empty() || workflow_steps.is_empty() {
+                    return Err(OxideError::Config(
+                        "Skill name and workflow_steps are required.".into(),
+                    ));
+                }
+
+                let skill = oxide_core::ProceduralSkill {
+                    name: name.to_string(),
+                    description: description.to_string(),
+                    triggers,
+                    workflow_steps,
+                    required_tools,
+                    provenance_project: self
+                        .workspace_dir
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("project")
+                        .to_string(),
+                    status: "active".to_string(),
+                    success_count: 1,
+                    last_executed_at: chrono::Utc::now(),
+                    embedding: None,
+                };
+
+                let skills_dir = self.workspace_dir.join(".oxide").join("skills");
+                std::fs::create_dir_all(&skills_dir)?;
+                let file_path = skills_dir.join(format!("{}.md", name.replace(' ', "-").to_lowercase()));
+                std::fs::write(&file_path, skill.to_aip_markdown())?;
+
+                if let Some(st) = store {
+                    let insert_sql = r#"
+                        UPSERT type::record('procedural_skill', $name) SET
+                            name = $name,
+                            description = $description,
+                            triggers = $triggers,
+                            workflow_steps = $steps,
+                            required_tools = $tools,
+                            provenance_project = $prov,
+                            status = 'active',
+                            success_count = 1,
+                            last_executed_at = time::now();
+                    "#;
+                    let _ = st
+                        .db()
+                        .query(insert_sql)
+                        .bind(("name", skill.name.clone()))
+                        .bind(("description", skill.description.clone()))
+                        .bind(("triggers", skill.triggers.clone()))
+                        .bind(("steps", skill.workflow_steps.clone()))
+                        .bind(("tools", skill.required_tools.clone()))
+                        .bind(("prov", skill.provenance_project.clone()))
+                        .await;
+                }
+
+                Ok(format!(
+                    "Distilled and persisted procedural skill `{}` into `{}`",
+                    skill.name,
+                    file_path.display()
+                ))
+            }
+
+            "oxide_recall_skill" => {
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                let query_lower = query.to_lowercase();
+                let skills_dir = self.workspace_dir.join(".oxide").join("skills");
+
+                let mut matched_skills = Vec::new();
+                if skills_dir.exists() {
+                    for entry in std::fs::read_dir(&skills_dir)? {
+                        let entry = entry?;
+                        let p = entry.path();
+                        if p.extension().map(|e| e == "md").unwrap_or(false) {
+                            let content = std::fs::read_to_string(&p)?;
+                            if query_lower.is_empty()
+                                || content.to_lowercase().contains(&query_lower)
+                            {
+                                matched_skills.push(content);
+                            }
+                        }
+                    }
+                }
+
+                if matched_skills.is_empty() {
+                    Ok(format!("No procedural skills found matching `{}`", query))
+                } else {
+                    Ok(matched_skills.join("\n\n---\n\n"))
                 }
             }
 

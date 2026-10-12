@@ -21,6 +21,28 @@ pub struct EmbeddingMetadata {
 }
 
 impl EmbeddingMetadata {
+    pub fn bge_small_en_default() -> Self {
+        let model = "bge-small-en-v1.5".to_string();
+        let file = "model.safetensors".to_string();
+        let dimension = 384;
+        let quantization = "f32".to_string();
+        let pooling = PoolingMethod::Mean;
+        let normalized = true;
+
+        let vector_set_id =
+            Self::compute_vector_set_id(&model, &quantization, dimension, &pooling, normalized);
+
+        Self {
+            model,
+            file,
+            dimension,
+            quantization,
+            pooling,
+            normalized,
+            vector_set_id,
+        }
+    }
+
     pub fn qwen3_0_6b_default() -> Self {
         let model = "qwen3-embedding-0.6b".to_string();
         let file = "Qwen3-Embedding-0.6B-Q4_K_M.gguf".to_string();

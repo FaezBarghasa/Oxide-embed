@@ -46,17 +46,6 @@ struct OutlineResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RawChunkResult {
-    file_path: Option<String>,
-    symbol_name: Option<String>,
-    start_line: usize,
-    end_line: usize,
-    outline: Option<String>,
-    text: String,
-    embedding: Option<Vec<f32>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct RawSymbolResult {
     #[serde(default)]
     file_id: Option<String>,
@@ -342,7 +331,7 @@ impl ProjectStore for SurrealProjectStore {
             UPSERT type::record('calls', $id) SET
                 in = type::record('symbol', $caller_id),
                 out = type::record('symbol', $callee_name),
-                caller_name = $caller_id,
+                caller_name = (SELECT VALUE name FROM type::record('symbol', $caller_id))[0] ?? $caller_id,
                 callee_name = $callee_name,
                 line = $line,
                 weight = 1.0,
@@ -474,6 +463,13 @@ impl ProjectStore for SurrealProjectStore {
         } else {
             conditions.push("status = 'active'".to_string());
         }
+        if !tags.is_empty() {
+            let tag_conds: Vec<String> = tags
+                .iter()
+                .map(|t| format!("'{}' IN tags", t.replace('\'', "''")))
+                .collect();
+            conditions.push(format!("({})", tag_conds.join(" OR ")));
+        }
         let where_clause = if conditions.is_empty() {
             String::new()
         } else {
@@ -502,10 +498,7 @@ impl ProjectStore for SurrealProjectStore {
         let rows: Vec<MemoryRow> = take_vec(&mut res, 0)?;
         let mut records = Vec::new();
         for r in rows {
-            let rec = r.into_memory_record()?;
-            if tags.is_empty() || tags.iter().any(|t| rec.tags.contains(t)) {
-                records.push(rec);
-            }
+            records.push(r.into_memory_record()?);
         }
         Ok(records)
     }
@@ -621,26 +614,59 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>> {
-        let sql = r#"
-            SELECT 
-                (SELECT VALUE relative_path FROM file WHERE id = type::record('file', chunk.file_id))[0] AS file_path,
-                (SELECT VALUE name FROM symbol WHERE id = type::record('symbol', chunk.symbol_id))[0] AS symbol_name,
-                start_line,
-                end_line,
-                outline,
-                text,
-                embedding
-            FROM chunk
-            LIMIT 200;
-        "#;
+        let (sql, bind_emb) = if let Some(ref q_emb) = query.embedding {
+            let s = r#"
+                SELECT 
+                    (SELECT VALUE relative_path FROM file WHERE id = type::record('file', chunk.file_id))[0] AS file_path,
+                    (SELECT VALUE name FROM symbol WHERE id = type::record('symbol', chunk.symbol_id))[0] AS symbol_name,
+                    start_line,
+                    end_line,
+                    outline,
+                    text,
+                    embedding,
+                    vector::similarity::cosine(embedding, $emb) AS vec_score
+                FROM chunk
+                WHERE embedding IS NOT NONE
+                ORDER BY vec_score DESC
+                LIMIT $limit;
+            "#;
+            (s, Some(q_emb.clone()))
+        } else {
+            let s = r#"
+                SELECT 
+                    (SELECT VALUE relative_path FROM file WHERE id = type::record('file', chunk.file_id))[0] AS file_path,
+                    (SELECT VALUE name FROM symbol WHERE id = type::record('symbol', chunk.symbol_id))[0] AS symbol_name,
+                    start_line,
+                    end_line,
+                    outline,
+                    text,
+                    embedding,
+                    0.0f AS vec_score
+                FROM chunk
+                LIMIT $limit;
+            "#;
+            (s, None)
+        };
 
-        let mut res = self
-            .db
-            .query(sql)
-            .await
-            .map_err(|e| OxideError::Database(e.to_string()))?;
+        #[derive(Debug, Deserialize)]
+        struct ChunkHitRow {
+            file_path: Option<String>,
+            symbol_name: Option<String>,
+            start_line: usize,
+            end_line: usize,
+            outline: Option<String>,
+            text: String,
+            vec_score: Option<f32>,
+        }
 
-        let chunks: Vec<RawChunkResult> = take_vec(&mut res, 0)?;
+        let limit = query.limit.max(10);
+        let mut q = self.db.query(sql).bind(("limit", limit as i64));
+        if let Some(emb) = bind_emb {
+            q = q.bind(("emb", emb));
+        }
+
+        let mut res = q.await.map_err(|e| OxideError::Database(e.to_string()))?;
+        let chunks: Vec<ChunkHitRow> = take_vec(&mut res, 0)?;
         let query_lower = query.text.to_lowercase();
 
         let mut hits: Vec<SearchHit> = chunks
@@ -659,7 +685,7 @@ impl ProjectStore for SurrealProjectStore {
                     .map(|s| s.to_lowercase())
                     .unwrap_or_default();
 
-                let mut score = 0.0f32;
+                let mut score = c.vec_score.unwrap_or(0.0) * 0.7;
 
                 if sym_lower.contains(&query_lower) && !query_lower.is_empty() {
                     score += 0.5;
@@ -669,11 +695,6 @@ impl ProjectStore for SurrealProjectStore {
                 }
                 if text_lower.contains(&query_lower) && !query_lower.is_empty() {
                     score += 0.2;
-                }
-
-                if let (Some(q_emb), Some(c_emb)) = (&query.embedding, &c.embedding) {
-                    let sim = cosine_similarity(q_emb, c_emb);
-                    score += sim * 0.7;
                 }
 
                 if score > 0.05 || query.text.is_empty() {
@@ -703,27 +724,54 @@ impl ProjectStore for SurrealProjectStore {
 
     async fn stair_search(&self, query: &str, limit: usize) -> Result<Vec<oxide_core::StairHit>> {
         let query_lower = query.to_lowercase();
-        let sym_sql = r#"
-            SELECT 
-                file_id,
-                name,
-                qualified_name,
-                kind,
-                start_line,
-                end_line,
-                signature,
-                doc,
-                is_macro_node,
-                parent_id,
-                breadcrumbs,
-                summary
-            FROM symbol
-            LIMIT 1000;
-        "#;
+        let sym_sql = if query_lower.is_empty() {
+            r#"
+                SELECT 
+                    file_id,
+                    name,
+                    qualified_name,
+                    kind,
+                    start_line,
+                    end_line,
+                    signature,
+                    doc,
+                    is_macro_node,
+                    parent_id,
+                    breadcrumbs,
+                    summary
+                FROM symbol
+                LIMIT $limit;
+            "#.to_string()
+        } else {
+            r#"
+                SELECT 
+                    file_id,
+                    name,
+                    qualified_name,
+                    kind,
+                    start_line,
+                    end_line,
+                    signature,
+                    doc,
+                    is_macro_node,
+                    parent_id,
+                    breadcrumbs,
+                    summary
+                FROM symbol
+                WHERE string::contains(string::lowercase(name), $q)
+                   OR (qualified_name IS NOT NONE AND string::contains(string::lowercase(qualified_name), $q))
+                   OR (summary IS NOT NONE AND string::contains(string::lowercase(summary), $q))
+                LIMIT $limit;
+            "#.to_string()
+        };
 
-        let mut sym_res = self
-            .db
-            .query(sym_sql)
+        let sym_limit = (limit * 4).max(50);
+        let mut q_stmt = self.db.query(&sym_sql).bind(("limit", sym_limit as i64));
+        if !query_lower.is_empty() {
+            q_stmt = q_stmt.bind(("q", query_lower.clone()));
+        }
+
+        let mut sym_res = q_stmt
             .await
             .map_err(|e| OxideError::Database(e.to_string()))?;
 
@@ -864,37 +912,42 @@ impl ProjectStore for SurrealProjectStore {
     }
 
     async fn export_surql(&self) -> Result<String> {
-        let mut f_res = self
-            .db
-            .query("SELECT * FROM file;")
-            .await
-            .map_err(|e| OxideError::Database(e.to_string()))?;
-        let files: Vec<serde_json::Value> = f_res
-            .take(0)
-            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let dump_table = |tbl: &'static str| {
+            let db = self.db.clone();
+            async move {
+                let mut res = db
+                    .query(format!("SELECT * FROM {};", tbl))
+                    .await
+                    .map_err(|e| OxideError::Database(e.to_string()))?;
+                let rows: Vec<serde_json::Value> = res
+                    .take(0)
+                    .map_err(|e| OxideError::Database(e.to_string()))?;
+                Ok::<_, OxideError>(rows)
+            }
+        };
 
-        let mut s_res = self
-            .db
-            .query("SELECT * FROM symbol;")
-            .await
-            .map_err(|e| OxideError::Database(e.to_string()))?;
-        let symbols: Vec<serde_json::Value> = s_res
-            .take(0)
-            .map_err(|e| OxideError::Database(e.to_string()))?;
-
-        let mut c_res = self
-            .db
-            .query("SELECT * FROM chunk;")
-            .await
-            .map_err(|e| OxideError::Database(e.to_string()))?;
-        let chunks: Vec<serde_json::Value> = c_res
-            .take(0)
-            .map_err(|e| OxideError::Database(e.to_string()))?;
+        let files = dump_table("file").await?;
+        let symbols = dump_table("symbol").await?;
+        let chunks = dump_table("chunk").await?;
+        let memories = dump_table("memory_record").await?;
+        let calls = dump_table("calls").await?;
+        let imports = dump_table("imports").await?;
+        let doc_sections = dump_table("doc_section").await?;
+        let doc_references = dump_table("doc_reference").await?;
+        let cerebrum_rules = dump_table("cerebrum_rule").await?;
+        let procedural_skills = dump_table("procedural_skill").await?;
 
         let dump = serde_json::json!({
             "files": files,
             "symbols": symbols,
             "chunks": chunks,
+            "memories": memories,
+            "calls": calls,
+            "imports": imports,
+            "doc_sections": doc_sections,
+            "doc_references": doc_references,
+            "cerebrum_rules": cerebrum_rules,
+            "procedural_skills": procedural_skills,
         });
 
         serde_json::to_string_pretty(&dump).map_err(|e| OxideError::Database(e.to_string()))
@@ -904,47 +957,30 @@ impl ProjectStore for SurrealProjectStore {
         let val: serde_json::Value =
             serde_json::from_str(content).map_err(|e| OxideError::Database(e.to_string()))?;
 
-        if let Some(files) = val.get("files").and_then(|v| v.as_array()) {
-            for f in files {
-                let _ = self
-                    .db
-                    .query("INSERT INTO file $data;")
-                    .bind(("data", f.clone()))
-                    .await;
-            }
-        }
-        if let Some(symbols) = val.get("symbols").and_then(|v| v.as_array()) {
-            for s in symbols {
-                let _ = self
-                    .db
-                    .query("INSERT INTO symbol $data;")
-                    .bind(("data", s.clone()))
-                    .await;
-            }
-        }
-        if let Some(chunks) = val.get("chunks").and_then(|v| v.as_array()) {
-            for c in chunks {
-                let _ = self
-                    .db
-                    .query("INSERT INTO chunk $data;")
-                    .bind(("data", c.clone()))
-                    .await;
+        let tables = [
+            ("files", "file"),
+            ("symbols", "symbol"),
+            ("chunks", "chunk"),
+            ("memories", "memory_record"),
+            ("calls", "calls"),
+            ("imports", "imports"),
+            ("doc_sections", "doc_section"),
+            ("doc_references", "doc_reference"),
+            ("cerebrum_rules", "cerebrum_rule"),
+            ("procedural_skills", "procedural_skill"),
+        ];
+
+        for (json_key, table_name) in tables {
+            if let Some(items) = val.get(json_key).and_then(|v| v.as_array()) {
+                for item in items {
+                    let _ = self
+                        .db
+                        .query(format!("INSERT INTO {} $data;", table_name))
+                        .bind(("data", item.clone()))
+                        .await;
+                }
             }
         }
         Ok(())
-    }
-}
-
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return 0.0;
-    }
-    let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if norm_a == 0.0 || norm_b == 0.0 {
-        0.0
-    } else {
-        dot / (norm_a * norm_b)
     }
 }

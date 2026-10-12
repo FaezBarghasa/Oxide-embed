@@ -189,4 +189,20 @@ DEFINE FIELD in ON derived_from TYPE record<memory_record>;
 DEFINE FIELD out ON derived_from TYPE option<string>;
 DEFINE FIELD source_type ON derived_from TYPE string DEFAULT "git_commit";
 DEFINE FIELD created_at ON derived_from TYPE datetime DEFAULT time::now();
+
+-- Procedural Memory (Layer 4 Reusable Skills)
+DEFINE TABLE procedural_skill SCHEMAFULL;
+DEFINE FIELD name ON procedural_skill TYPE string;
+DEFINE FIELD description ON procedural_skill TYPE string;
+DEFINE FIELD triggers ON procedural_skill TYPE array<string>;
+DEFINE FIELD workflow_steps ON procedural_skill TYPE array<string>;
+DEFINE FIELD required_tools ON procedural_skill TYPE array<string>;
+DEFINE FIELD provenance_project ON procedural_skill TYPE string;
+DEFINE FIELD status ON procedural_skill TYPE string DEFAULT "active";
+DEFINE FIELD success_count ON procedural_skill TYPE int DEFAULT 1;
+DEFINE FIELD last_executed_at ON procedural_skill TYPE datetime DEFAULT time::now();
+DEFINE FIELD embedding ON procedural_skill TYPE option<array<float>>;
+DEFINE INDEX idx_skill_name ON procedural_skill FIELDS name UNIQUE;
+DEFINE INDEX idx_skill_status ON procedural_skill FIELDS status;
+DEFINE INDEX skill_vector_idx ON procedural_skill FIELDS embedding HNSW DIMENSION 384 DIST COSINE;
 "#;

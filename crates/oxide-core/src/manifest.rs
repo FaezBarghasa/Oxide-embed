@@ -83,7 +83,7 @@ impl OxideManifest {
                 mode: "embedded".to_string(),
                 path: "project.db".to_string(),
             },
-            embedding: EmbeddingMetadata::qwen3_0_6b_default(),
+            embedding: EmbeddingMetadata::bge_small_en_default(),
             features: FeaturesMeta::default(),
         }
     }
