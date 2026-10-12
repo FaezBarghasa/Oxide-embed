@@ -22,11 +22,32 @@ pub async fn handle_memify(
         decay_days, prune_threshold
     );
 
-    let _engine = MemifyEngine::new(decay_days, prune_threshold);
+    let engine = MemifyEngine::new(decay_days, prune_threshold);
     let symbol_count = store.count_symbols().await?;
     println!("Evaluated {} symbols in memory graph.", symbol_count);
 
-    println!("Memify cycle completed. Stale graph connections pruned.");
+    // Apply live decay to calls edges in SurrealDB
+    let decay_sql = r#"
+        UPDATE calls SET 
+            weight = weight * math::pow(0.5, (time::now() - valid_from) / ($half_life_secs))
+        WHERE valid_from IS NOT NONE;
+    "#;
+    let half_life_secs = (decay_days * 86400.0).max(1.0);
+    let _ = store
+        .db()
+        .query(decay_sql)
+        .bind(("half_life_secs", half_life_secs))
+        .await;
+
+    // Prune stale calls edges below prune_threshold
+    let prune_sql = "DELETE calls WHERE weight < $threshold;";
+    let _ = store
+        .db()
+        .query(prune_sql)
+        .bind(("threshold", prune_threshold as f64))
+        .await;
+
+    println!("Memify cycle completed. Stale graph connections pruned below threshold {}.", prune_threshold);
 
     Ok(())
 }

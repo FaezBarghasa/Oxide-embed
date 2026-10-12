@@ -247,7 +247,7 @@ fn traverse_calls(node: Node, content: &str, symbols: &[SymbolRecord], calls: &m
                 });
             }
         }
-    } else if (kind == "field_expression" || kind == "method_call_expression")
+    } else if kind == "method_call_expression"
         && let Some(method_node) = node.child_by_field_name("name")
         && let Ok(callee_text) = method_node.utf8_text(content.as_bytes())
     {

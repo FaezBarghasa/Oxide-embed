@@ -222,41 +222,43 @@ async fn run_loop<B: ratatui::backend::Backend>(
         tokio::select! {
             maybe_event = event_stream.next() => {
                 if let Some(Ok(Event::Key(key))) = maybe_event {
-            if app.search_mode {
-                match key.code {
-                    KeyCode::Esc | KeyCode::Enter => {
-                        app.search_mode = false;
-                    }
-                    KeyCode::Backspace => {
-                        app.search_query.pop();
-                    }
-                    KeyCode::Char(c) => {
-                        app.search_query.push(c);
-                    }
-                    _ => {}
-                }
-            } else {
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Char('c')
-                        if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
-                        app.should_quit = true;
-                    }
-                    KeyCode::Char('q') => {
-                        app.should_quit = true;
-                    }
-                    KeyCode::Tab => {
-                        app.toggle_pane();
-                    }
-                    KeyCode::Char('/') => {
-                        app.search_mode = true;
-                    }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        app.next_symbol();
-                    }
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        app.prev_symbol();
-                    }
+                    if app.search_mode {
+                        match key.code {
+                            KeyCode::Esc | KeyCode::Enter => {
+                                app.search_mode = false;
+                            }
+                            KeyCode::Backspace => {
+                                app.search_query.pop();
+                            }
+                            KeyCode::Char(c) => {
+                                app.search_query.push(c);
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        match key.code {
+                            KeyCode::Char('q') | KeyCode::Char('c')
+                                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                            {
+                                app.should_quit = true;
+                            }
+                            KeyCode::Char('q') => {
+                                app.should_quit = true;
+                            }
+                            KeyCode::Tab => {
+                                app.toggle_pane();
+                            }
+                            KeyCode::Char('/') => {
+                                app.search_mode = true;
+                            }
+                            KeyCode::Down | KeyCode::Char('j') => {
+                                app.next_symbol();
+                            }
+                            KeyCode::Up | KeyCode::Char('k') => {
+                                app.prev_symbol();
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }

@@ -14,7 +14,6 @@ use oxide_parser::Language;
 use oxide_parser::slicer::SymbolSlicer;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -979,7 +978,7 @@ impl McpServer {
                             .collect()
                     })
                     .unwrap_or_default();
-                let workflow_steps = args
+                let workflow_steps: Vec<String> = args
                     .get("workflow_steps")
                     .and_then(|v| v.as_array())
                     .map(|arr| {

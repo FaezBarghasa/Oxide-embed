@@ -10,7 +10,7 @@ use std::time::Instant;
 
 pub async fn handle_index(
     project_root: &Path,
-    _force: bool,
+    force: bool,
     device_override: Option<&str>,
     batch_size_override: Option<usize>,
 ) -> Result<()> {
@@ -55,6 +55,25 @@ pub async fn handle_index(
     let files = walker.walk()?;
     println!("Found {} indexable files", files.len());
 
+    // Fetch existing files hash map from DB if not force
+    let mut existing_hashes = std::collections::HashMap::new();
+    if !force {
+        let sql = "SELECT id, content_hash FROM file;";
+        if let Ok(mut res) = store.db().query(sql).await {
+            let raw_rows: Vec<serde_json::Value> = res.take(0).unwrap_or_default();
+            for r in raw_rows {
+                let id_str = match r.get("id") {
+                    Some(serde_json::Value::String(s)) => s.strip_prefix("file:").unwrap_or(s).to_string(),
+                    Some(val) => val.to_string(),
+                    None => continue,
+                };
+                if let Some(h) = r.get("content_hash").and_then(|v| v.as_str()) {
+                    existing_hashes.insert(id_str, h.to_string());
+                }
+            }
+        }
+    }
+
     let chunker = Chunker::new(config.index.chunk_max_tokens);
 
     let mut total_symbols = 0;
@@ -68,6 +87,13 @@ pub async fn handle_index(
 
     // 1. First Pass: Files, Symbols, Chunks extraction, Call Graph, and Imports
     for (file_record, content) in &files {
+        if !force && let Some(prev_hash) = existing_hashes.get(&file_record.id.0) {
+            if file_record.content_hash.as_ref() == Some(prev_hash) {
+                // File unchanged; skip re-indexing
+                continue;
+            }
+        }
+
         store.upsert_file(file_record).await?;
 
         let lang = Language::from_path(&file_record.relative_path);
