@@ -338,4 +338,54 @@ pub enum Commands {
 
     #[command(about = "Launch interactive terminal dashboard (TUI)")]
     Tui,
+
+    #[command(
+        about = "Tiered cognitive reflection: queries standing mental models or executes 4-way RRF recall"
+    )]
+    Reflect {
+        #[arg(help = "Question or architectural inquiry")]
+        query: String,
+
+        #[arg(long, default_value = "1500", help = "Token budget ceiling")]
+        budget: usize,
+
+        #[arg(long, help = "Bypass standing mental models and force fresh synthesis")]
+        force_fresh: bool,
+    },
+
+    #[command(about = "Manage standing mental models and architectural knowledge pages")]
+    Model {
+        #[command(subcommand)]
+        subcommand: ModelSubcommand,
+    },
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum ModelSubcommand {
+    #[command(about = "Create a standing mental model")]
+    Create {
+        #[arg(help = "Topic slug (e.g. auth, safety, memory)")]
+        topic: String,
+
+        #[arg(short, long, help = "Standing question")]
+        question: String,
+
+        #[arg(short, long, help = "Standing markdown answer")]
+        answer: String,
+
+        #[arg(long, help = "Referenced symbol names (comma-separated)")]
+        symbols: Option<String>,
+
+        #[arg(long, help = "Referenced file paths (comma-separated)")]
+        files: Option<String>,
+    },
+
+    #[command(about = "List all active mental models")]
+    List,
+
+    #[command(about = "Inspect a specific mental model")]
+    Get {
+        #[arg(help = "Topic slug")]
+        topic: String,
+    },
 }

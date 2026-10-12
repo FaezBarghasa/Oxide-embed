@@ -98,6 +98,9 @@ pub async fn handle_index(
         }
 
         store.upsert_file(file_record).await?;
+        let _ = store
+            .mark_mental_models_stale_for_files(&[file_record.relative_path.clone()])
+            .await;
 
         let lang = Language::from_path(&file_record.relative_path);
         let (symbols, call_edges, import_edges) = if let Some(extractor) = get_extractor(lang) {

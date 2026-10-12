@@ -18,6 +18,7 @@ pub mod memify;
 pub mod memory;
 pub mod model;
 pub mod read_guard;
+pub mod reflect;
 pub mod retrieval;
 pub mod symbol;
 
@@ -43,6 +44,7 @@ pub use memify::{BugLogRecord, CerebrumRule, DecayStats, MemifyEngine};
 pub use memory::{ConflictDetector, MemoryKind, MemoryRecord, MemoryStatus, ProceduralSkill};
 pub use model::MentalModel;
 pub use read_guard::{ReadGuardDecision, SessionReadGuard, SessionReadRecord};
+pub use reflect::{ReflectEngine, ReflectResult};
 pub use retrieval::{FusedItem, RrfCandidate, RrfScorer};
 pub use symbol::{
     CallEdge, ImportEdge, StairHit, SymbolKind, SymbolRecord, deserialize_null_as_empty_vec,

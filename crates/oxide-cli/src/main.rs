@@ -12,7 +12,8 @@ use commands::{
     handle_answer, handle_callees, handle_callers, handle_conflicts, handle_consolidate,
     handle_context, handle_distill, handle_doctor, handle_explain, handle_export, handle_handoff,
     handle_impact, handle_import, handle_index, handle_init, handle_install_hook, handle_memify,
-    handle_outline, handle_read, handle_recall, handle_remember, handle_report, handle_run,
+    handle_model_create, handle_model_get, handle_model_list,
+    handle_outline, handle_read, handle_recall, handle_reflect, handle_remember, handle_report, handle_run,
     handle_search, handle_sync_notes, handle_tokenmap,
 };
 use mcp::McpServer;
@@ -130,6 +131,38 @@ async fn main() -> ExitCode {
         Commands::Consolidate => handle_consolidate(project_root).await,
         Commands::Export { out } => handle_export(project_root, &out).await,
         Commands::Import { bundle } => handle_import(project_root, &bundle).await,
+        Commands::Reflect {
+            query,
+            budget,
+            force_fresh,
+        } => handle_reflect(project_root, &query, budget, force_fresh).await,
+        Commands::Model { subcommand } => match subcommand {
+            cli::ModelSubcommand::Create {
+                topic,
+                question,
+                answer,
+                symbols,
+                files,
+            } => {
+                let sym_list = symbols
+                    .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
+                    .unwrap_or_default();
+                let file_list = files
+                    .map(|f| f.split(',').map(|x| x.trim().to_string()).collect())
+                    .unwrap_or_default();
+                handle_model_create(
+                    project_root,
+                    &topic,
+                    &question,
+                    &answer,
+                    sym_list,
+                    file_list,
+                )
+                .await
+            }
+            cli::ModelSubcommand::List => handle_model_list(project_root).await,
+            cli::ModelSubcommand::Get { topic } => handle_model_get(project_root, &topic).await,
+        },
         Commands::Tui => {
             #[cfg(feature = "tui")]
             {

@@ -200,6 +200,9 @@ impl WorkspaceWatcher {
             last_indexed_at: Some(chrono::Utc::now()),
         };
         store.upsert_file(&file_rec).await?;
+        let _ = store
+            .mark_mental_models_stale_for_files(&[rel_str.clone()])
+            .await;
 
         // Purge previous symbols and chunks for this file
         let purge_sql = r#"
