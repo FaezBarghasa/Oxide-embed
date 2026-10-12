@@ -56,13 +56,19 @@ pub enum Commands {
         batch_size: Option<usize>,
         #[arg(
             long,
+            default_missing_value = "true",
+            num_args = 0..=1,
             default_value_t = true,
+            action = clap::ArgAction::Set,
             help = "Scan and refresh workspace crate catalog in ~/RustroverProjects/ for anti-duplication"
         )]
         scan_crates: bool,
         #[arg(
             long,
+            default_missing_value = "true",
+            num_args = 0..=1,
             default_value_t = true,
+            action = clap::ArgAction::Set,
             help = "Distill recent git commits into agent decision and learning memories"
         )]
         distill_git: bool,
